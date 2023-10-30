@@ -341,40 +341,41 @@ da_patch1 = da_patch.data[(da_patch["label"].data == 7)]
 
 
 
-#%% patch statistics extraction)
+#%% patch statistics extraction
 import numpy as np
 import pandas as pd
 import cv2
 
 # Define a function to calculate statistics for a patch
-def calculate_statistics(patch_data, binary_patch, ds_patch):
-    #statistics on intensity property
-    mean = np.mean(patch_data).compute()
-    std = np.std(patch_data).compute()
+def calculate_statistics(ds_patch):
     
-
-    total_values = np.sum(patch_data > 0).compute()
-    sum_total_rain = (patch_data[patch_data > 0]).sum().compute()
+    # Create a dictionary to store the results
+    results = {}
     
-    count_over_5 = np.sum(patch_data > 5).compute()
-    count_over_10 = np.sum(patch_data > 10).compute()
-    count_over_20 = np.sum(patch_data > 20).compute()
-    count_over_50 = np.sum(patch_data > 50).compute()
-    
-    max_value = np.max(patch_data).compute()
-
-    #statistics on image property
-    num_labels, labeled_mask = cv2.connectedComponents(binary_patch.astype(np.uint8))
-    num_patches = num_labels - 1    
-    # Count patches for values over 5
-    
-    count_patches_over_5, _ = cv2.connectedComponents((ds_patch['precipRateNearSurface'].data > 5).compute().astype(np.uint8), connectivity=8)    
-    count_patches_over_10, _ = cv2.connectedComponents((ds_patch['precipRateNearSurface'].data > 10).compute().astype(np.uint8), connectivity=8)    
-    count_patches_over_20, _ = cv2.connectedComponents((ds_patch['precipRateNearSurface'].data > 20).compute().astype(np.uint8), connectivity=8)    
-    count_patches_over_50, _ = cv2.connectedComponents((ds_patch['precipRateNearSurface'].data > 50).compute().astype(np.uint8), connectivity=8)    
-
+    #extract data from ds_patch
     ds_patch["zFactorFinal"] = ds_patch["zFactorFinal"].compute()
+    ds_patch["precipRateNearSurface"] = ds_patch["precipRateNearSurface"].compute()
+
+        
+    # Store the constants
+    results["mean"] = np.mean(ds_patch["precipRateNearSurface"]).data
+    results["std"] = np.std(ds_patch["precipRateNearSurface"]).data
+    results["total_values"] = np.sum(ds_patch["precipRateNearSurface"].data > 0)
+    results["sum_total_rain"] = ((ds_patch["precipRateNearSurface"]).data).sum()
+    results["max_value"] = np.max(ds_patch["precipRateNearSurface"]).data
     
+    # Threshold values to iterate over, including 0 for count_over_0
+    thresholds = [0, 5, 10, 20, 50]
+    
+    # Iterate over thresholds and count_over variables
+    for threshold in thresholds:
+        # Count patches for the current threshold
+        count_patches, _ = cv2.connectedComponents((ds_patch['precipRateNearSurface'].data > threshold).astype(np.uint8), connectivity=8)
+        results[f"count_patches_over_{threshold}"] = count_patches
+    
+        # Count values for the current threshold
+        count_over = np.sum(ds_patch["precipRateNearSurface"].data > threshold)
+        results[f"count_over_{threshold}"] = count_over  
     #statistics on reflectivity
     ds_patch["REFCH"] = ds_patch.gpm_api.retrieve("REFCH").compute()
     ds_patch["echodepth18"] = ds_patch.gpm_api.retrieve("EchoDepth", threshold = 18).compute()
@@ -387,51 +388,48 @@ def calculate_statistics(patch_data, binary_patch, ds_patch):
     # ds_patch["MESH"] = ds_patch.gpm_api.retrieve("MESH")
 
 
+
     # Define a function to calculate statistics from data arrays with NaN values excluded
-    def calculate_statistics_from_data_array(data):
+    def calculate_statistics(data):
         data = data[~np.isnan(data)]
-        
+    
         if data.size == 0:
-            # Handle the case when there are no valid data points
             return np.nan, np.nan, np.nan
-        
+    
         mean = np.mean(data)
         std = np.std(data)
-        
-        if data.size == 0:
-            max_value = np.nan
-        else:
-            max_value = np.max(data)
-        
+        max_value = np.max(data)
+    
         return mean, std, max_value
     
-    # Calculate statistics for each variable with NaN values excluded
-    refch_data = ds_patch["REFCH"].data
-    refch_mean, refch_std, refch_max = calculate_statistics_from_data_array(refch_data)
+    # Define a list of variable names and their corresponding data arrays
+    variables = [
+        ("REFCH", ds_patch["REFCH"].data),
+        ("echodepth18", ds_patch["echodepth18"].data),
+        ("echodepth30", ds_patch["echodepth30"].data),
+        ("echodepth50", ds_patch["echodepth50"].data),
+        ("echotopheight18", ds_patch["echotopheight18"].data),
+        ("echotopheight30", ds_patch["echotopheight30"].data),
+        ("echotopheight50", ds_patch["echotopheight50"].data)
+    ]
     
-    echodepth18_data = ds_patch["echodepth18"].data
-    echodepth_mean_18, echodepth_std_18, echodepth_max_18 = calculate_statistics_from_data_array(echodepth18_data)
-    
-    echodepth30_data = ds_patch["echodepth30"].data
-    echodepth_mean_30, echodepth_std_30, echodepth_max_30 = calculate_statistics_from_data_array(echodepth30_data)
-    
-    echodepth50_data = ds_patch["echodepth50"].data
-    echodepth_mean_50, echodepth_std_50, echodepth_max_50 = calculate_statistics_from_data_array(echodepth50_data)
-    
-    echotopheight18_data = ds_patch["echotopheight18"].data
-    echotopheight_mean_18, echotopheight_std_18, echotopheight_max_18 = calculate_statistics_from_data_array(echotopheight18_data)
-    
-    echotopheight30_data = ds_patch["echotopheight30"].data
-    echotopheight_mean_30, echotopheight_std_30, echotopheight_max_30 = calculate_statistics_from_data_array(echotopheight30_data)
-    
-    echotopheight50_data = ds_patch["echotopheight50"].data
-    echotopheight_mean_50, echotopheight_std_50, echotopheight_max_50 = calculate_statistics_from_data_array(echotopheight50_data)
+    # Calculate statistics for each variable with NaN values excluded and store in the dictionary
+    for var_name, data_array in variables:
+        mean, std, max_value = calculate_statistics(data_array)
+        
+        # Store mean, std, and max in the results dictionary with appropriate keys
+        results[f"{var_name}_mean"] = mean
+        results[f"{var_name}_std"] = std
+        results[f"{var_name}_max"] = max_value
 
-    time = ds_patch["time"][round(ds_patch["time"].data.shape[0]/2)].data
+
+    results["time"] = ds_patch["time"][round(ds_patch["time"].data.shape[0]/2)].data
     
-    lon = ds_patch["lon"][round(ds_patch["lon"].data.shape[0]/2)][round(ds_patch["lon"].data.shape[1]/2)].data
+    results["lon"] = ds_patch["lon"][round(ds_patch["lon"].data.shape[0]/2)][round(ds_patch["lon"].data.shape[1]/2)].data
     
-    lat = ds_patch["lat"][round(ds_patch["lat"].data.shape[0]/2)][round(ds_patch["lat"].data.shape[1]/2)].data
+    results["lat"] = ds_patch["lat"][round(ds_patch["lat"].data.shape[0]/2)][round(ds_patch["lat"].data.shape[1]/2)].data
+    
+    #cut_count = ds_patch[] 
     
     # Calculate statistics for each variable
     # refch_mean = ds_patch["REFCH"].data.mean(skipna=True)  # Calculate mean of REFCH
@@ -470,68 +468,17 @@ def calculate_statistics(patch_data, binary_patch, ds_patch):
 
         
     
-    return {   
-        'mean': mean,
-        'std': std,
-        'area': total_values,
-        'count_over_5': count_over_5,
-        'count_over_10': count_over_10,
-        'count_over_20': count_over_20,
-        'count_over_50': count_over_50,
-        'total_rain': sum_total_rain,
-        'max': max_value,
-        'num_storm': num_patches,
-        'num_storm_over_5': count_patches_over_5-1,
-        'num_storm_over_10': count_patches_over_10-1,
-        'num_storm_over_20': count_patches_over_20-1,
-        'num_storm_over_50': count_patches_over_50-1,
-        'refch_mean': refch_mean,
-        'refch_std': refch_std,
-        'refch_max': refch_max,
-        'echodepth_mean_18': echodepth_mean_18,
-        'echodepth_std_18': echodepth_std_18,
-        'echodepth_max_18': echodepth_max_18,
-        'echodepth_mean_30': echodepth_mean_30,
-        'echodepth_std_30': echodepth_std_30,
-        'echodepth_max_30': echodepth_max_30,
-        'echodepth_mean_50': echodepth_mean_50,
-        'echodepth_std_50': echodepth_std_50,
-        'echodepth_max_50': echodepth_max_50,
-        'echotopheight_mean_18': echotopheight_mean_18,
-        'echotopheight_std_18': echotopheight_std_18,
-        'echotopheight_max_18': echotopheight_max_18,
-        'echotopheight_mean_30': echotopheight_mean_30,
-        'echotopheight_std_30': echotopheight_std_30,
-        'echotopheight_max_30': echotopheight_max_30,
-        'echotopheight_mean_50': echotopheight_mean_50,
-        'echotopheight_std_50': echotopheight_std_50,
-        'echotopheight_max_50': echotopheight_max_50,
-        'time': time,
-        'longitude': lon,
-        'latitude': lat,
-        # 'shi_mean': shi_mean,
-        # 'shi_max': shi_max,
-        # 'mesh_mean': mesh_mean,
-        # 'mesh_max': mesh_max
-#Add more statistics as needed
-    }
-
+    return results
 # Create an empty list to store statistics for each patch
 patch_statistics = []
 
 for i in range(1, n_patches):
     isel_dict = label_isel_dict[i][0]
-    da_patch = xr_obj.isel(isel_dict)
     #reflectivity_patch = (ds["zFactorFinal"].sel(radar_frequency='Ku')).isel(isel_dict)
     ds_patch = ds.isel(isel_dict)
-    
-    
 
-    da_patch1 = da_patch.data[(da_patch["label"].data == i)]
-    
-    binary_patch = np.where(da_patch["label"].data == i, 1, 0)
     # Calculate statistics for the patch
-    stats = calculate_statistics(da_patch1, binary_patch, ds_patch)
+    stats = calculate_statistics(ds_patch)
 
     # Append the statistics to the list
     patch_statistics.append(stats)
