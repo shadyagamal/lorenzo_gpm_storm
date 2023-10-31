@@ -1,0 +1,106 @@
+Metadata-Version: 2.1
+Name: gpm-storm
+Version: 0.1.dev2+gb93b3b3.d20231031
+Summary: Investigating the spatial structure of precipitation
+Author-email: Lorenzo Comi <lorenzo.comi@epfl.ch>, Gionata Ghiggi <gionata.ghiggi@epfl.ch>
+License: MIT License
+
+        Copyright (c) 2023 Gionata Ghiggi
+
+        Permission is hereby granted, free of charge, to any person obtaining a copy
+        of this software and associated documentation files (the "Software"), to deal
+        in the Software without restriction, including without limitation the rights
+        to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+        copies of the Software, and to permit persons to whom the Software is
+        furnished to do so, subject to the following conditions:
+
+        The above copyright notice and this permission notice shall be included in all
+        copies or substantial portions of the Software.
+
+        THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+        IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+        FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+        AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+        LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+        OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+        SOFTWARE.
+
+Project-URL: Homepage, https://github.com/lorcomi/gpm_storm
+Project-URL: Source, https://github.com/lorcomi/gpm_storm
+Project-URL: Tracker, https://github.com/lorcomi/gpm_storm/issues
+Project-URL: Documentation, https://gpm_storm.readthedocs.io
+Project-URL: changelog, https://github.com/lorcomi/gpm_storm/CHANGELOG.md
+Keywords: GPM,Precipitation,DPR
+Classifier: Development Status :: 2 - Pre-Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: Intended Audience :: Education
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Natural Language :: English
+Classifier: Operating System :: OS Independent
+Classifier: Operating System :: Unix
+Classifier: Operating System :: Microsoft
+Classifier: Operating System :: MacOS
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Scientific/Engineering
+Classifier: Topic :: Scientific/Engineering :: Atmospheric Science
+Classifier: Topic :: Scientific/Engineering :: Image Processing
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: xarray
+Requires-Dist: xarray-datatree
+Requires-Dist: h5py
+Requires-Dist: netcdf4
+Requires-Dist: dask
+Requires-Dist: wget
+Requires-Dist: tqdm
+Requires-Dist: click
+Requires-Dist: donfig
+Requires-Dist: trollsift
+Requires-Dist: pyresample
+Requires-Dist: cartopy>=0.20.0
+Requires-Dist: gpm_api
+Requires-Dist: ximage
+Provides-Extra: dev
+Requires-Dist: pre-commit; extra == "dev"
+Requires-Dist: black[jupyter]; extra == "dev"
+Requires-Dist: blackdoc; extra == "dev"
+Requires-Dist: codespell; extra == "dev"
+Requires-Dist: ruff; extra == "dev"
+Requires-Dist: setuptools>=61.0.0; extra == "dev"
+Requires-Dist: wheel; extra == "dev"
+
+# Welcome to GPM-STORM
+
+
+## Quick start
+
+
+Before starting using GPM-API, we highly suggest to save into a configuration file:
+1. your credentials to access the [NASA Precipitation Processing System (PPS) servers][PPS_link]
+2. the directory on the local disk where to save the GPM dataset of interest.
+
+To facilitate the creation of the configuration file, you can run the following script:
+
+```python
+import gpm_api
+
+username = "<your PPS username>" # likely your mail
+password = "<your PPS password>" # likely your mail
+gpm_base_dir = "<path/to/directory/GPM"  # path to the directory where to download the data
+gpm_api.define_configs(username_pps=username,
+                       password_pps=password,
+                       gpm_base_dir=gpm_base_dir)
+
+# You can check that the config file has been correctly created with:
+configs = gpm_api.read_configs()
+print(configs)
+
+```
