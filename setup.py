@@ -2,4 +2,6 @@
 
 from setuptools import setup
 
-setup()
+setup(  name='gpm_storm',
+    version='1.0.0',
+    packages=find_packages(),)
