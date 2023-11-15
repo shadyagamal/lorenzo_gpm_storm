@@ -60,6 +60,8 @@ variables = [
 
 
 filepaths = get_local_filepaths(product, version=7, product_type="RS")
+
+
 for filepath in filepaths:
     ds = gpm_api.open_granule(filepath, variables=variables, scan_mode="FS")
 
