@@ -113,7 +113,7 @@ def calculate_image_statistics(ds_patch, along_track_slice):
     dict_results["along_track_start"] = along_track_slice.start
     dict_results["along_track_end"] = along_track_slice.stop
     dict_results["gpm_granule_id"] = int(ds_patch["gpm_granule_id"][0].data)
-    dict_results["time"] = ds_patch["time"][round(ds_patch["time"].data.shape[0] / 2)][round(ds_patch["time"].data.shape[1] / 2)].data
+    dict_results["time"] = ds_patch["time"][round(ds_patch["time"].data.shape[0] / 2)].data
     dict_results["sunLocalTime"] = float(ds_patch["sunLocalTime"][round(ds_patch["sunLocalTime"].data.shape[0] / 2)][round(ds_patch["sunLocalTime"].data.shape[1] / 2)].data)
     dict_results["lon"] = float(ds_patch["lon"][round(ds_patch["lon"].data.shape[0] / 2)][round(ds_patch["lon"].data.shape[1] / 2)].data)
     dict_results["lat"] = float(ds_patch["lat"][round(ds_patch["lat"].data.shape[0] / 2)][round(ds_patch["lat"].data.shape[1] / 2)].data)
