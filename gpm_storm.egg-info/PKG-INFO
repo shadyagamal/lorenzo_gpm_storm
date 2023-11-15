@@ -1,22 +1,22 @@
 Metadata-Version: 2.1
 Name: gpm-storm
-Version: 0.1.dev2+gb93b3b3.d20231031
+Version: 0.1.dev10+g403eeb7.d20231115
 Summary: Investigating the spatial structure of precipitation
 Author-email: Lorenzo Comi <lorenzo.comi@epfl.ch>, Gionata Ghiggi <gionata.ghiggi@epfl.ch>
 License: MIT License
-
+        
         Copyright (c) 2023 Gionata Ghiggi
-
+        
         Permission is hereby granted, free of charge, to any person obtaining a copy
         of this software and associated documentation files (the "Software"), to deal
         in the Software without restriction, including without limitation the rights
         to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
         copies of the Software, and to permit persons to whom the Software is
         furnished to do so, subject to the following conditions:
-
+        
         The above copyright notice and this permission notice shall be included in all
         copies or substantial portions of the Software.
-
+        
         THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
         IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
         FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -24,7 +24,7 @@ License: MIT License
         LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
         OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
         SOFTWARE.
-
+        
 Project-URL: Homepage, https://github.com/lorcomi/gpm_storm
 Project-URL: Source, https://github.com/lorcomi/gpm_storm
 Project-URL: Tracker, https://github.com/lorcomi/gpm_storm/issues
