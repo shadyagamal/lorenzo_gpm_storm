@@ -18,11 +18,44 @@ def _calculate_mean_std_max_stats(data):
     return mean, std, max_value
 
 
-def calculate_image_statistics(ds_patch, along_track_slice):
+def _count_percentage_within_range(arr, vmin, vmax):
+    # Mask pixels within the intensity range
+    masked_pixels = np.logical_and(arr > vmin,  arr <= vmax)
+
+    # Count the number of pixels within the intensity range
+    pixels_in_range = np.sum(masked_pixels)
+
+    # Calculate the percentage
+    percentage = (pixels_in_range / np.nansum(arr > 0)) * 100
+    return percentage
+
+
+def _get_ellipse_major_minor_axis(label_arr):
+    regions = regionprops(label_arr)
+    if len(regions) == 0: 
+        return np.nan, np.nan, 0
+    largest_patch_index = np.argmax([region.area for region in regions])
+    
+    # Extract coordinates of pixels in the largest patch
+    largest_patch_coords = regions[largest_patch_index].coords
+    
+    # Count number of pixels largest patch 
+    n_pixels = largest_patch_coords.shape[0] 
+    if n_pixels > 5:
+        # Fit an ellipse to the coordinates
+        ellipse = cv2.fitEllipse(np.array(largest_patch_coords))
+        # Calculate the ratio between major and minor axes
+        major_axis, minor_axis = ellipse[1]
+    else: 
+        major_axis = np.nan 
+        minor_axis = np.nan
+    return major_axis, minor_axis, n_pixels
+
+
+def calculate_image_statistics(ds, patch_isel_dict): 
     """Define a function to calculate statistics for a patch."""
-    # Extract data from ds_patch
-    # ds_patch["zFactorFinal"] = ds_patch["zFactorFinal"].compute()
-    # ds_patch["precipRateNearSurface"] = ds_patch["precipRateNearSurface"].compute()
+    
+    ds_patch = ds.isel(patch_isel_dict)
     
     # Create a dictionary to store the dict_results
     dict_results = {}
@@ -36,55 +69,38 @@ def calculate_image_statistics(ds_patch, along_track_slice):
     dict_results["precipitation_max"] = np.nanmax(ds_patch["precipRateNearSurface"].data)
 
     # Threshold values to iterate over, including 0 for count_over_0
-    thresholds = [0, 5, 10, 20, 50]
-    intensity_ranges = [(0, 1), (1, 5), (5, 10), (10, 20)]
+    thresholds = [0, 1, 2, 5, 10, 20, 50]
 
     # Iterate over thresholds and count_over variables
-    for threshold in thresholds:
-        # Count patches for the current threshold
+    for threshold in thresholds:       
+        # Count rainy areas for a given threshold
+        # - 0 is counted as a patches 
         count_patches, labeled_image = cv2.connectedComponents(
-            (ds_patch["precipRateNearSurface"].data > threshold).astype(np.uint8), connectivity=8
+            (ds_patch["precipRateNearSurface"].data > threshold).astype(np.uint8), 
+            connectivity=8
         )
-        dict_results[f"count_patches_over_{threshold}"] = count_patches
-        if threshold == 0:
-            regions = regionprops(labeled_image)
-            
-            largest_patch_index = np.argmax([region.area for region in regions])
-            
-            # Extract coordinates of pixels in the largest patch
-            largest_patch_coords = regions[largest_patch_index].coords
-            
-            # Fit an ellipse to the coordinates
-            ellipse = cv2.fitEllipse(np.array(largest_patch_coords))
-    
-            # Calculate the ratio between major and minor axes
-            major_axis, minor_axis = ellipse[1]
+        dict_results[f"count_rainy_areas_over_{threshold}"] = count_patches -1
+       
+        # Count rainy pixels for the current threshold
+        count_pixels = np.sum(ds_patch["precipRateNearSurface"].data > threshold)
+        dict_results[f"count_rainy_pixels_over_{threshold}"] = count_pixels
+                
+        # Compute aspect ratio 
+        if threshold in [0, 1, 2, 5, 10, 20]:
+            major_axis, minor_axis, n_patch_pixels = _get_ellipse_major_minor_axis(labeled_image)
             aspect_ratio = major_axis / minor_axis
-            
-            dict_results["major_axis_ellipse"] = major_axis
-            # Store the results in your dictionary
-            dict_results["largest_patch_aspect_ratio"] = aspect_ratio
-        # Count values for the current threshold
-        count_over = np.sum(ds_patch["precipRateNearSurface"].data > threshold)
-        dict_results[f"count_over_{threshold}"] = count_over
-    
-    for intensity_range in intensity_ranges:
-        range_min, range_max = intensity_range
+            dict_results["major_axis_largest_patch_over_{threshold}"] = major_axis
+            dict_results["minor_axis_largest_patch_over_{threshold}"] = minor_axis
+            dict_results["aspect_ratio_largest_patch_over_{threshold}"] = aspect_ratio
+            dict_results["count_rainy_pixels_in_patch_over_{threshold}"] = n_patch_pixels
+ 
+    # Count percentage of values within a given value range
+    intensity_ranges = [(0, 1), (1, 2), (2, 5), (5, 10), (10, 20)]
+    for vmin, vmax in intensity_ranges:
+        percentage = _count_percentage_within_range(ds_patch["precipRateNearSurface"].data, 
+                                                    vmin=vmin, vmax=vmax)
+        dict_results[f"percentage_rainy_pixels_between_{vmin}_and_{vmax}"] = percentage
 
-        # Mask pixels within the intensity range
-        masked_pixels = np.logical_and(ds_patch["precipRateNearSurface"].data > range_min, ds_patch["precipRateNearSurface"].data <= range_max)
-
-        # Count the number of pixels within the intensity range
-        pixels_in_range = np.sum(masked_pixels)
-
-        # Calculate the percentage
-        percentage = (pixels_in_range / np.nansum(ds_patch["precipRateNearSurface"].data > 0)) * 100
-
-        # Store the results in your dictionary
-        dict_results[f"percentage_{range_min}_to_{range_max}"] = percentage
-
-
-    
     # Compute reflectivity-related statistics
     ds_patch["REFCH"] = ds_patch.gpm_api.retrieve("REFCH").compute()
     ds_patch["echodepth18"] = ds_patch.gpm_api.retrieve("EchoDepth", threshold=18).compute()
@@ -110,6 +126,7 @@ def calculate_image_statistics(ds_patch, along_track_slice):
         dict_results[f"{variable}_max"] = max_value
 
     # Add image patch identifiers (image center)
+    along_track_slice = patch_isel_dict['along_track']
     dict_results["along_track_start"] = along_track_slice.start
     dict_results["along_track_end"] = along_track_slice.stop
     dict_results["gpm_granule_id"] = int(ds_patch["gpm_granule_id"][0].data)

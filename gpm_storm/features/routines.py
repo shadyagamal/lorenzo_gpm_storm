@@ -21,8 +21,23 @@ from gpm_api.io.info import get_start_time_from_filepaths
 from gpm_storm.features.image import calculate_image_statistics
  
 
-def run_granule_feature_extraction(filepath, dst_dir):
+def run_granule_feature_extraction(filepath, dst_dir, force=False):
     
+    # Define filepath 
+    start_time = get_start_time_from_filepaths(filepath)[0]
+    filename = os.path.basename(filepath).replace("HDF5", "")
+    filename = f"GPM_STORM.{filename}.feature.parquet"
+    dirtree = get_time_tree(check_date(check_time(start_time)))
+    dir_path = os.path.join(dst_dir, dirtree)
+    os.makedirs(dir_path, exist_ok=True)
+    filepath = os.path.join(dir_path, filename)
+    
+    if os.path.exists(filepath): 
+        if force: 
+            os.remove(filepath)
+        else: 
+            raise ValueError(f"force=False and {filepath} already exists.")
+
     # List some variables of interest
     variables = [
         "sunLocalTime",
@@ -44,6 +59,10 @@ def run_granule_feature_extraction(filepath, dst_dir):
     # Open granule dataset
     ds = gpm_api.open_granule(filepath, variables=variables, scan_mode="FS")
     
+    # Put in memory data for label definition 
+    ds["precipRateNearSurface"] = ds["precipRateNearSurface"].compute()
+    da = ds["precipRateNearSurface"]
+    
     # %%
     ###################
     #### Labelling ####
@@ -56,7 +75,7 @@ def run_granule_feature_extraction(filepath, dst_dir):
     sort_by = "area"
     sort_decreasing = True
     label_name = "label"
-    da = ds["precipRateNearSurface"].compute()
+  
     
     # Retrieve labeled xarray object
     xr_obj = da.ximage.label(
@@ -79,12 +98,12 @@ def run_granule_feature_extraction(filepath, dst_dir):
     label_name = "label"
     labels_id = None
     n_labels = None
-    n_patches = None
+    n_patches = np.Inf
     # Patch Extraction Options
     centered_on = "label_bbox"
     padding = 0
     # Define the patch generator
-    label_isel_dict = xr_obj.ximage.label_patches_isel_dicts(
+    patch_isel_dict = xr_obj.ximage.label_patches_isel_dicts(
         label_name=label_name,
         patch_size=patch_size,
         variable=variable,
@@ -100,30 +119,20 @@ def run_granule_feature_extraction(filepath, dst_dir):
     )
         
     # %% patch statistics extraction
-    
-    n_patches = len(label_isel_dict)
-    
-    # Calculate statistics for the patch
-    # - Read first in memory to speed up computations
+        
+    # Read first in memory to speed up computations [9 seconds]
     ds["zFactorFinal"] = ds["zFactorFinal"].compute()
     ds["precipRateNearSurface"] = ds["precipRateNearSurface"].compute()
     ds["sunLocalTime"] = ds["sunLocalTime"].compute()
     
+    # Compute statistics for each patch
+    n_patches = len(patch_isel_dict)
     patch_statistics = [
-        calculate_image_statistics(ds.isel(label_isel_dict[i][0]), label_isel_dict[i][0]['along_track']) for i in range(1, n_patches)
+        calculate_image_statistics(ds, patch_isel_dict[i][0]) for i in range(1, n_patches)
     ]
         
     # Create a pandas DataFrame from the list
     df = pd.DataFrame(patch_statistics)
     df['time'] = pd.to_datetime(df['time'], format='%Y-%m-%dT%H:%M:%S.%f')
-    
-    # Define filepath 
-    start_time = get_start_time_from_filepaths(filepath)
-    filename = f"dpr_feature_granule_{filepath}.parquet"
-    dirtree = get_time_tree(check_date(check_time(start_time)))
-    dir_path = os.path.join(dst_dir, dirtree)
-    os.makedirs(dir_path, exist_ok=True)
-    filepath = os.path.join(dir_path, filename)
-    
     # Save DataFrame to Parquet
     df.to_parquet(filepath)
