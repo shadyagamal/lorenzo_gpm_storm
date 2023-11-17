@@ -11,6 +11,7 @@ Spyder Editor
 This is a temporary script file.
 """
 import os 
+import dask
 import gpm_api
 import numpy as np
 import pandas as pd
@@ -19,22 +20,33 @@ from gpm_api.io.local import get_time_tree
 from gpm_api.io.checks import check_date, check_time
 from gpm_api.io.info import get_start_time_from_filepaths
 from gpm_storm.features.image import calculate_image_statistics
- 
+
+
+@dask.delayed
+def run_feature_extraction(filepath, dst_dir, force):
+    with dask.config.set(scheduler="single-threaded"):
+        try: 
+            run_granule_feature_extraction(filepath, dst_dir=dst_dir, force=force)
+            msg = ""
+        except Exception as e: 
+            msg = f"Processing of {filepath} failed with '{e}'."
+    return msg 
+
 
 def run_granule_feature_extraction(filepath, dst_dir, force=False):
     
     # Define filepath 
     start_time = get_start_time_from_filepaths(filepath)[0]
-    filename = os.path.basename(filepath).replace("HDF5", "")
-    filename = f"GPM_STORM.{filename}.feature.parquet"
+    filename = os.path.basename(filepath).replace(".HDF5", "")
+    filename = f"GPM_STORM.{filename}.parquet"
     dirtree = get_time_tree(check_date(check_time(start_time)))
     dir_path = os.path.join(dst_dir, dirtree)
     os.makedirs(dir_path, exist_ok=True)
-    filepath = os.path.join(dir_path, filename)
+    df_filepath = os.path.join(dir_path, filename)
     
-    if os.path.exists(filepath): 
+    if os.path.exists(df_filepath): 
         if force: 
-            os.remove(filepath)
+            os.remove(df_filepath)
         else: 
             raise ValueError(f"force=False and {filepath} already exists.")
 
@@ -135,4 +147,4 @@ def run_granule_feature_extraction(filepath, dst_dir, force=False):
     df = pd.DataFrame(patch_statistics)
     df['time'] = pd.to_datetime(df['time'], format='%Y-%m-%dT%H:%M:%S.%f')
     # Save DataFrame to Parquet
-    df.to_parquet(filepath)
+    df.to_parquet(df_filepath)

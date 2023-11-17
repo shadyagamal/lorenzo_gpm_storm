@@ -8,26 +8,16 @@ Created on Wed Nov 15 13:10:23 2023
 import os
 import dask
 import logging
-from dask.distributed import Client, LocalCluster
-from gpm_storm.features.routines import run_granule_feature_extraction
 
 dask.config.set({'distributed.worker.multiprocessing-method': 'forkserver'})
 dask.config.set({'distributed.worker.use-file-locking': 'False'})
 
 
-@dask.delayed
-def run_feature_extraction(filepath, dst_dir, force):
-    with dask.config.set(scheduler="single-threaded"):
-        try: 
-            run_granule_feature_extraction(filepath, dst_dir=dst_dir, force=force)
-        except Exception as e: 
-            print(f"Processing of {filepath} failed with '{e}'.")
-    return None 
-
-
 if __name__ == "__main__": #  https://github.com/dask/distributed/issues/2520
 
     from gpm_api.io.local import get_local_filepaths
+    from dask.distributed import Client, LocalCluster
+    from gpm_storm.features.routines import run_feature_extraction
 
     
     dst_dir ="/ltenas8/data/GPM_STORM/features_v1"
@@ -38,10 +28,10 @@ if __name__ == "__main__": #  https://github.com/dask/distributed/issues/2520
     
     # Specify cluster settings
     cluster = LocalCluster(
-        n_workers=24,
+        n_workers=40,
         threads_per_worker=1,
         processes=True,
-        memory_limit="800GB",
+        memory_limit="100GB",
         silence_logs=logging.WARN,
         )
     client = Client(cluster)
@@ -49,10 +39,11 @@ if __name__ == "__main__": #  https://github.com/dask/distributed/issues/2520
     # Retrieve GPM granule filepaths 
     filepaths = get_local_filepaths(product="2A-DPR", version=7, product_type="RS")
     
-    filepaths = filepaths[0:4]
+    # filepaths = filepaths[0:10]
+    
     # Apply storm patch feature extraction to each granule 
     list_delayed = [run_feature_extraction(filepath, dst_dir=dst_dir, force=force) for filepath in filepaths]
     
     # Compute delayed functions 
-    list_delayed = dask.compute(list_delayed)
+    list_msg = dask.compute(list_delayed)
 
