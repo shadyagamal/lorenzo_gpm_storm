@@ -9,20 +9,22 @@ Created on Thu Nov 16 14:29:26 2023
 import glob
 import os
 import pandas as pd 
+import numpy as np
 import pyarrow.dataset as ds
 import pyarrow as pa
 import matplotlib.pyplot as plt
+from scipy.stats import binned_statistic_2d
 import seaborn as sns
 
 
 
 
-def relative_distribution_of_dataset(df):
+def _relative_distribution_of_dataset(df):
 
     columns = df.columns
 
     # Calculate the number of rows and columns needed for the subplots
-    num_columns = len(columns)-4
+    num_columns = len(columns)
     num_rows = (num_columns + 2) // 3  # Adjust the number of columns as needed
 
     # Create subplots with the desired layout
@@ -48,7 +50,7 @@ def relative_distribution_of_dataset(df):
     plt.tight_layout()
     plt.show()
 
-def boxplot_of_dataset(df):
+def _boxplot_of_dataset(df):
         # Get the list of column names in your DataFrame
     columns = df.columns
     
@@ -77,38 +79,99 @@ def boxplot_of_dataset(df):
     
     plt.tight_layout()
     plt.show()
+    
+def _bivariate_analysis(df, x_variable, y_variable, color_variable):
+    
+    
+    df[x_variable] = pd.to_numeric(df[x_variable], errors='coerce')
+    df[y_variable] = pd.to_numeric(df[y_variable], errors='coerce')
+    df[color_variable] = pd.to_numeric(df[color_variable], errors='coerce')
+
+    # Convert Arrow columns to Pandas Series
+    x_values = np.array(df[x_variable])
+    y_values = np.array(df[y_variable])
+    color_values = np.array(df[color_variable])
+    
+    # Handle missing values
+    df.dropna(subset=[x_variable, y_variable, color_variable], inplace=True)
 
 
-# Rest of your code
+
+    # Set the style of seaborn
+    sns.set(style="whitegrid")
+    
+    # Create a scatter plot with color based on the third variable
+    plt.figure(figsize=(10, 8))
+    sns.scatterplot(x=x_values, y=y_values, hue=color_values, palette='viridis', edgecolor='w', s=100)
+    
+    # Add labels and a legend
+    plt.title(f'Bivariate Analysis of {x_variable} and {y_variable} (Colored by {color_variable})')
+    plt.xlabel(x_variable)
+    plt.ylabel(y_variable)
+    plt.legend(title=color_variable)
+    
+    # Show the plot
+    plt.show()
+    
+    bins = 20
+    
+    # Create a 2D histogram with mean values
+    statistic, x_edges, y_edges, binnumber = binned_statistic_2d(
+        x=x_values,
+        y=y_values,
+        values=color_values,
+        statistic='mean',
+        bins=bins
+    )
+    
+    # Create a heatmap using Seaborn
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(statistic.T, cmap='viridis', xticklabels=x_edges, cbar=True)
+    
+ 
+    # Add labels and a title
+    plt.title(f'Bivariate Analysis with Mean Values (Color Coded for {color_variable})')
+    plt.xlabel(x_variable)
+    plt.ylabel(y_variable)
+    
+    # Show the plot
+    plt.show()
+
+
+
+def preliminary_dataset_analysis(dst_dir):
+    list_file = glob.glob(os.path.join(dst_dir, "*", "*", "*", "*.parquet"))
+    dataset = ds.dataset(list_file[0:100])
+    
+    table = dataset.to_table()
+    # Create empty list to store successfully loaded tables
+    # tables = []
+    
+    # for file_path in list_file:
+    #     try:
+    #         # Try to open the file and convert it to a Table
+    #         table = ds.dataset(file_path).to_table()
+            
+    #         # If successful, add the table to the list
+    #         tables.append(table)
+    #     except FileNotFoundError as e:
+    #         # Handle the FileNotFoundError (or other relevant exceptions) here
+    #         print(f"Error opening file {file_path}: {e}")
+    
+    # Concatenate all successfully loaded tables into one
+    #final_table = pa.concat_tables(tables)
+    
+    df = table.to_pandas(types_mapper=pd.ArrowDtype) 
+    
+    
+    # Get the list of column names in your DataFrame
+    
+    _relative_distribution_of_dataset(df)
+    _boxplot_of_dataset(df)
+    _bivariate_analysis(df, 'precipitation_pixel', 'precipitation_sum', 'count_rainy_areas_over_10')
+    return list_file
+
 dst_dir = "/ltenas8/data/GPM_STORM/features_v1"
-list_file = glob.glob(os.path.join(dst_dir, "*", "*", "*", "*.parquet"))
+list_files = preliminary_dataset_analysis(dst_dir)
 
-
-dataset = ds.dataset(list_file[0:100])
-
-table = dataset.to_table()
-# Create empty list to store successfully loaded tables
-# tables = []
-
-# for file_path in list_file:
-#     try:
-#         # Try to open the file and convert it to a Table
-#         table = ds.dataset(file_path).to_table()
-        
-#         # If successful, add the table to the list
-#         tables.append(table)
-#     except FileNotFoundError as e:
-#         # Handle the FileNotFoundError (or other relevant exceptions) here
-#         print(f"Error opening file {file_path}: {e}")
-
-# Concatenate all successfully loaded tables into one
-#final_table = pa.concat_tables(tables)
-
-df = table.to_pandas(types_mapper=pd.ArrowDtype) 
-
-
-# Get the list of column names in your DataFrame
-
-relative_distribution_of_dataset(df)
-boxplot_of_dataset(df)
 
