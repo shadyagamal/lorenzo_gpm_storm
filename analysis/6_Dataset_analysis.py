@@ -140,36 +140,21 @@ def _bivariate_analysis(df, x_variable, y_variable, color_variable):
 
 
 def preliminary_dataset_analysis(dst_dir):
-    list_file = glob.glob(os.path.join(dst_dir, "*", "*", "*", "*.parquet"))
-    dataset = ds.dataset(list_file[0:100])
+    list_files = glob.glob(os.path.join(dst_dir, "*", "*", "*", "*.parquet"))
+    dataset = ds.dataset(list_files)
     
     table = dataset.to_table()
-    # Create empty list to store successfully loaded tables
-    # tables = []
-    
-    # for file_path in list_file:
-    #     try:
-    #         # Try to open the file and convert it to a Table
-    #         table = ds.dataset(file_path).to_table()
-            
-    #         # If successful, add the table to the list
-    #         tables.append(table)
-    #     except FileNotFoundError as e:
-    #         # Handle the FileNotFoundError (or other relevant exceptions) here
-    #         print(f"Error opening file {file_path}: {e}")
-    
-    # Concatenate all successfully loaded tables into one
-    #final_table = pa.concat_tables(tables)
-    
-    df = table.to_pandas(types_mapper=pd.ArrowDtype) 
+
+        
+    df = table.to_pandas(types_mapper=pd.ArrowDtype)
     
     
     # Get the list of column names in your DataFrame
     
     _relative_distribution_of_dataset(df)
     _boxplot_of_dataset(df)
-    _bivariate_analysis(df, 'precipitation_pixel', 'precipitation_sum', 'count_rainy_areas_over_10')
-    return list_file
+    _bivariate_analysis(df, 'precipitation_pixel', 'precipitation_sum', 'lat')
+    return list_files
 
 dst_dir = "/ltenas8/data/GPM_STORM/features_v1"
 list_files = preliminary_dataset_analysis(dst_dir)
