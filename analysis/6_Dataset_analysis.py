@@ -13,8 +13,9 @@ import numpy as np
 import pyarrow.dataset as ds
 import pyarrow as pa
 import matplotlib.pyplot as plt
-from scipy.stats import binned_statistic_2d
+from scipy.stats import binned_statistic_2d, shapiro, anderson
 import seaborn as sns
+from sklearn.preprocessing import MinMaxScaler
 
 
 
@@ -41,6 +42,37 @@ def _relative_distribution_of_dataset(df):
             sns.histplot(data=df, x=column, kde=True, ax=axes[i], stat='percent', common_norm=False)
             axes[i].set_title(f"Relative Distribution of {column}")
             axes[i].set_xlabel("Values")
+            axes[i].set_ylabel("Relative Frequency (%)")
+
+    # Hide any empty subplots
+    for i in range(num_columns, len(axes)):
+        axes[i].axis("off")
+
+    plt.tight_layout()
+    plt.show()
+    
+def _relative_log_distribution_of_dataset(df):
+    columns = df.columns
+
+    # Calculate the number of rows and columns needed for the subplots
+    num_columns = 30
+    num_rows = (num_columns + 2) // 3  # Adjust the number of columns as needed
+
+    # Create subplots with the desired layout
+    fig, axes = plt.subplots(num_rows, 3, figsize=(15, 5 * num_rows))
+    fig.suptitle("Distributions of Data", y=1.02)
+
+    # Flatten the axes array for easier iteration
+    axes = axes.flatten()
+
+    # Plot the relative distributions for each column
+    for i, column in enumerate(columns[:30]):  # Plot only the first twenty variables
+        # Check if the column is numeric (excluding the 'time' column)
+        if pd.api.types.is_numeric_dtype(df[column]) and column != ('time', 'along_track_start', 'along_track_stop', 'gpm_granule_id'):
+            # Use log scale on the x-axis
+            sns.histplot(data=df, x=column, kde=True, ax=axes[i], stat='percent', common_norm=False, log_scale=(True, False))
+            axes[i].set_title(f"Relative Distribution of {column}")
+            axes[i].set_xlabel("Values (log scale)")
             axes[i].set_ylabel("Relative Frequency (%)")
 
     # Hide any empty subplots
@@ -137,7 +169,60 @@ def _bivariate_analysis(df, x_variable, y_variable, color_variable):
     # Show the plot
     plt.show()
 
+def _normality_tests(df):    
+   columns_to_process = df.columns[:-5]
+   results_list = []
 
+   for column in columns_to_process:
+       # Normality Test
+       stat_norm, p_value_norm = shapiro(df[column])
+       
+       # Log-Normality Test
+       log_data = np.log(df[column])
+       stat_log_norm, p_value_log_norm = shapiro(log_data)
+       
+       # Anderson-Darling Test
+       result_anderson = anderson(df[column])
+       
+       results_list.append({
+           'Variable': column,
+           'Shapiro-Wilk Statistic': stat_norm,
+           'Shapiro-Wilk p-value': p_value_norm,
+           'Log-Normal Shapiro-Wilk Statistic': stat_log_norm,
+           'Log-Normal Shapiro-Wilk p-value': p_value_log_norm,
+           'Anderson-Darling Statistic': result_anderson.statistic,
+           'Anderson-Darling Critical Values': result_anderson.critical_values,
+           'Anderson-Darling Significance Level': result_anderson.significance_level
+       })
+
+   results_df = pd.DataFrame(results_list)
+  
+    # results_df["Variable"]: column
+    # results_df['Shapiro-Wilk Statistic']: stat_norm
+    # results_df['Shapiro-Wilk p-value']: p_value_norm
+    # results_df['Log-Normal Shapiro-Wilk Statistic']: stat_log_norm
+    # results_df['Log-Normal Shapiro-Wilk p-value']: p_value_log_norm
+    # results_df['Anderson-Darling Statistic']: result_anderson.statistic
+    # results_df['Anderson-Darling Critical Values']: result_anderson.critical_values
+    # results_df['Anderson-Darling Significance Level']: result_anderson.significance_level
+      
+   return results_df
+
+def _process_nan_values(df, threshold_percentage=30):
+    # Calculate the percentage of NaN values for each column
+    nan_percentages = (df.isnull().sum() / len(df)) * 100
+
+    # Display NaN percentages
+    print("NaN Percentages for Each Column:")
+    print(nan_percentages)
+
+    # Create a list of columns to drop based on the threshold percentage
+    columns_to_drop = nan_percentages[nan_percentages > threshold_percentage].index.tolist()
+
+    # Create a new DataFrame without columns containing NaN values above the threshold
+    df_no_nan = df.drop(columns=columns_to_drop)
+
+    return df_no_nan
 
 def preliminary_dataset_analysis(dst_dir):
     list_files = glob.glob(os.path.join(dst_dir, "*", "*", "*", "*.parquet"))
@@ -149,14 +234,35 @@ def preliminary_dataset_analysis(dst_dir):
     df = table.to_pandas(types_mapper=pd.ArrowDtype)
     
     
+    #creating dataset without nan values
+    df_no_nan = _process_nan_values(df, threshold_percentage=1)
+    
+    
+    
+    
+    
+    
     # Get the list of column names in your DataFrame
     
     _relative_distribution_of_dataset(df)
     _boxplot_of_dataset(df)
     _bivariate_analysis(df, 'precipitation_pixel', 'precipitation_sum', 'lat')
-    return list_files
+    _relative_log_distribution_of_dataset(df)
+    results = _normality_tests(df_no_nan)
+    
+    #scale data
+    scaler = MinMaxScaler()
+    df_scaled = pd.DataFrame(scaler.fit_transform(df), columns=df.columns)
+
+    
+    return df, df_no_nan, df_scaled, results 
 
 dst_dir = "/ltenas8/data/GPM_STORM/features_v1"
 list_files = preliminary_dataset_analysis(dst_dir)
 
+file_path = '/home/comi/Projects/dataframe.parquet'
 
+# Read the Parquet file into a DataFrame
+df = pd.read_parquet(file_path)
+
+df["lenght_track"] = df["along_track_end"] - df["along_track_start"]
