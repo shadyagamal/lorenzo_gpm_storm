@@ -20,6 +20,7 @@ from gpm_api.io.local import get_time_tree, get_local_daily_filepaths
 from gpm_api.io.checks import check_date, check_time
 from gpm_api.io.info import get_start_time_from_filepaths, get_granule_from_filepaths
 from gpm_storm.features.image import calculate_image_statistics
+from datetime import timedelta
 
 
 
@@ -152,22 +153,34 @@ def run_granule_feature_extraction(filepath, dst_dir, force=False):
 
 def patch_plot_and_extraction(granule_id, slice_start, slice_end, date):
     
-    date_conv = date.dt.strftime('%Y-%m-%dT%H:%M:%S.%f')
+    day_before = date - timedelta(days = 1)
+    day_after = date + timedelta(days = 1)
+
+    # date_conv = date.strftime('%Y-%m-%dT%H:%M:%S.%f')
     product = "2A-DPR"  # 2A-PR
-    filepaths = get_local_daily_filepaths(product, date_conv, product_type="RS", version = 7)
+    filepaths = get_local_daily_filepaths(product = product,  product_type="RS", date = date, version = 7)
+    real_filepath = []
     
-    for filepath in filepaths:
-        if granule_id == get_granule_from_filepaths(filepath):
-            real_filepath = filepath
-            break
-        
+    # Iterate over the three dates
+    for date in [date, day_before, day_after]:
+        # Use the date_str in your logic
+        filepaths = get_local_daily_filepaths(product=product, product_type="RS", date=date, version=7)
+    
+        for filepath in filepaths:
+            granule_found = get_granule_from_filepaths(filepath)
+            granule_found = int(''.join(map(str, granule_found)))
+            
+            if granule_id == granule_found:
+                real_filepath = filepath
+                break
+
     # List some variables of interest
     variable = ["precipRateNearSurface"]
-    
+    print(f"filepath: {real_filepath}")
     # Open granule dataset
     ds = gpm_api.open_granule(real_filepath, variables=variable, scan_mode="FS")
     ds = ds.isel(along_track=slice(slice_start, slice_end))
-    ds[variable].isel(along_track=slice(slice_start, slice_end)).gpm_api.plot_map()    
+    ds[variable].gpm_api.plot_image(variable)   
 
 
     return ds

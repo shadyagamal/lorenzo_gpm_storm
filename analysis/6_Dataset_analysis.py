@@ -16,6 +16,8 @@ import matplotlib.pyplot as plt
 from scipy.stats import binned_statistic_2d, shapiro, anderson
 import seaborn as sns
 from sklearn.preprocessing import MinMaxScaler
+from gpm_storm.features.routines import patch_plot_and_extraction
+
 
 
 
@@ -264,5 +266,13 @@ file_path = '/home/comi/Projects/dataframe.parquet'
 
 # Read the Parquet file into a DataFrame
 df = pd.read_parquet(file_path)
+
+index_of_interest = 409
+ds = patch_plot_and_extraction(
+    granule_id=df.loc[index_of_interest, 'gpm_granule_id'],
+    slice_start=df.loc[index_of_interest, 'along_track_start'],
+    slice_end=df.loc[index_of_interest, 'along_track_end'],
+    date=df.loc[index_of_interest, 'time']
+)
 
 df["lenght_track"] = df["along_track_end"] - df["along_track_start"]
