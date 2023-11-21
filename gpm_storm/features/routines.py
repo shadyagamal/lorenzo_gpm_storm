@@ -16,10 +16,11 @@ import gpm_api
 import numpy as np
 import pandas as pd
 import ximage  # noqa
-from gpm_api.io.local import get_time_tree
+from gpm_api.io.local import get_time_tree, get_local_daily_filepaths
 from gpm_api.io.checks import check_date, check_time
-from gpm_api.io.info import get_start_time_from_filepaths
+from gpm_api.io.info import get_start_time_from_filepaths, get_granule_from_filepaths
 from gpm_storm.features.image import calculate_image_statistics
+
 
 
 @dask.delayed
@@ -148,3 +149,25 @@ def run_granule_feature_extraction(filepath, dst_dir, force=False):
     df['time'] = pd.to_datetime(df['time'], format='%Y-%m-%dT%H:%M:%S.%f')
     # Save DataFrame to Parquet
     df.to_parquet(df_filepath)
+
+def patch_plot_and_extraction(granule_id, slice_start, slice_end, date):
+    
+    date_conv = date.dt.strftime('%Y-%m-%dT%H:%M:%S.%f')
+    product = "2A-DPR"  # 2A-PR
+    filepaths = get_local_daily_filepaths(product, date_conv, product_type="RS", version = 7)
+    
+    for filepath in filepaths:
+        if granule_id == get_granule_from_filepaths(filepath):
+            real_filepath = filepath
+            break
+        
+    # List some variables of interest
+    variable = ["precipRateNearSurface"]
+    
+    # Open granule dataset
+    ds = gpm_api.open_granule(real_filepath, variables=variable, scan_mode="FS")
+    ds = ds.isel(along_track=slice(slice_start, slice_end))
+    ds[variable].isel(along_track=slice(slice_start, slice_end)).gpm_api.plot_map()    
+
+
+    return ds
