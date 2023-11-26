@@ -19,6 +19,7 @@ import ximage  # noqa
 from gpm_api.io.local import get_time_tree, get_local_daily_filepaths
 from gpm_api.io.checks import check_date, check_time
 from gpm_api.io.info import get_start_time_from_filepaths, get_granule_from_filepaths
+from gpm_api.io.find import find_filepaths
 from gpm_storm.features.image import calculate_image_statistics
 from datetime import timedelta
 
@@ -151,36 +152,40 @@ def run_granule_feature_extraction(filepath, dst_dir, force=False):
     # Save DataFrame to Parquet
     df.to_parquet(df_filepath)
 
-def patch_plot_and_extraction(granule_id, slice_start, slice_end, date):
-    
-    day_before = date - timedelta(days = 1)
-    day_after = date + timedelta(days = 1)
 
-    # date_conv = date.strftime('%Y-%m-%dT%H:%M:%S.%f')
-    product = "2A-DPR"  # 2A-PR
-    filepaths = get_local_daily_filepaths(product = product,  product_type="RS", date = date, version = 7)
-    real_filepath = []
+def get_gpm_storm_patch(granule_id, 
+                        slice_start, 
+                        slice_end,
+                        date, 
+                        product = "2A-DPR",
+                        scan_mode="FS",
+                        verbose=True,
+                        variables=["precipRateNearSurface"]):
     
-    # Iterate over the three dates
-    for date in [date, day_before, day_after]:
-        # Use the date_str in your logic
-        filepaths = get_local_daily_filepaths(product=product, product_type="RS", date=date, version=7)
+    start_time = date - timedelta(hours = 5)
+    end_time = date + timedelta(hours = 5)
     
-        for filepath in filepaths:
-            granule_found = get_granule_from_filepaths(filepath)
-            granule_found = int(''.join(map(str, granule_found)))
-            
-            if granule_id == granule_found:
-                real_filepath = filepath
-                break
-
-    # List some variables of interest
-    variable = ["precipRateNearSurface"]
-    print(f"filepath: {real_filepath}")
+    filepaths = find_filepaths(product=product,  
+                               product_type="RS", 
+                               storage="local", 
+                               version=7, 
+                               start_time=start_time, 
+                               end_time=end_time, 
+                               verbose=verbose,
+                               parallel=True,
+                               )
+    if len(filepaths) == 0: 
+        raise ValueError(f"No file available between {start_time} and {end_time}")
+    granule_ids = get_granule_from_filepaths(filepaths)
+    indices = [i for i, iid in enumerate(granule_ids) if iid == granule_id]
+    if len(indices) == 0: 
+        raise ValueError(f"File corresponding to granule_id {granule_id} not found !")
+    filepath = filepaths[indices[0]]
+    if verbose:
+        print(f"filepath: {filepath}")
+        
     # Open granule dataset
-    ds = gpm_api.open_granule(real_filepath, variables=variable, scan_mode="FS")
+    ds = gpm_api.open_granule(filepath, variables=variables, scan_mode=scan_mode)
     ds = ds.isel(along_track=slice(slice_start, slice_end))
-    ds[variable].gpm_api.plot_image(variable)   
-
-
     return ds
+

@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import binned_statistic_2d, shapiro, anderson
 import seaborn as sns
 from sklearn.preprocessing import MinMaxScaler
-from gpm_storm.features.routines import patch_plot_and_extraction
+from gpm_storm.features.routines import get_gpm_storm_patch
 
 
 
@@ -268,11 +268,50 @@ file_path = '/home/comi/Projects/dataframe.parquet'
 df = pd.read_parquet(file_path)
 
 index_of_interest = 409
-ds = patch_plot_and_extraction(
+
+granule_id=df.loc[index_of_interest, 'gpm_granule_id']
+slice_start=df.loc[index_of_interest, 'along_track_start']
+slice_end=df.loc[index_of_interest, 'along_track_end']
+date=df.loc[index_of_interest, 'time']
+storage = "local"
+version = 7 
+product = "2A-DPR"
+scan_mode = "FS"
+variable = "precipRateNearSurface"
+
+ds = get_gpm_storm_patch(
     granule_id=df.loc[index_of_interest, 'gpm_granule_id'],
     slice_start=df.loc[index_of_interest, 'along_track_start'],
     slice_end=df.loc[index_of_interest, 'along_track_end'],
-    date=df.loc[index_of_interest, 'time']
+    date=df.loc[index_of_interest, 'time'],
+    verbose=False,
+    variables=variable,
 )
 
+da = ds[variable]
+da.gpm_api.plot_image()   
+
+
+from gpm_api.utils.utils_cmap import get_colorbar_settings
+plot_kwargs = {} 
+cbar_kwargs = {}
+
+plot_kwargs, cbar_kwargs = get_colorbar_settings(
+    name=da.name, plot_kwargs=plot_kwargs, cbar_kwargs=cbar_kwargs
+)
+ticklabels = cbar_kwargs.pop("ticklabels", None)
+p = da.plot.imshow(**plot_kwargs, add_colorbar=False) # cbar_kwargs=cbar_kwargs)
+p.axes.set_title("")
+p.axes.set_xlabel("")
+p.axes.set_ylabel("")
+# p.axes.set_axis_off()
+
+# hspace, wspace
+
+# GPM-API 
+# ds.gpm_api.plot_image(variable=variable)
+
+
+
+ 
 df["lenght_track"] = df["along_track_end"] - df["along_track_start"]
