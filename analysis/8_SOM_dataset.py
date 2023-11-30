@@ -21,10 +21,10 @@ df = pd.read_parquet(file_path)
 
 scaler = MinMaxScaler()
 df_scaled = pd.DataFrame(scaler.fit_transform(df), columns=df.columns)
-df_scaled_prova = df_scaled.iloc[:1000, :]
-df_prova = df.iloc[:1000, :]
+df_scaled_prova = df_scaled.iloc[:5000, :]
+df_prova = df.iloc[:5000, :]
 # Extract the relevant features from your DataFrame
-data = df_scaled.iloc[:1000, :-30].values
+data = df_scaled.iloc[:5000, :-30].values
 
 # Define the size of the SOM grid
 som_grid_size = (10, 10)
@@ -78,26 +78,59 @@ def create_images_for_som(som, df, bmus):
     return images
 
 # Function to show images
-def show_images(images, i, j):
+def show_images(images, i, j, ax):
     plot_kwargs = {} 
     cbar_kwargs = {}
 
     plot_kwargs, cbar_kwargs = get_colorbar_settings(
         name=images[i, j].name, plot_kwargs=plot_kwargs, cbar_kwargs=cbar_kwargs
-    )
+    )   
     
-    # Use Matplotlib's imshow directly to display the image
-    plt.imshow(images[i, j], **plot_kwargs)
-    plt.title("")  # Set title to an empty string
-    plt.xlabel("")  # Set xlabel to an empty string
-    plt.ylabel("")  # Set ylabel to an empty string
+    max_value_position = np.unravel_index(np.argmax(images[i, j].values), images[i, j].shape)
 
+    # Extract row and column indices
+    center_x, center_y = max_value_position
+    if center_y < 25:
+        ax.imshow(images[i, j][:, 0:49], **plot_kwargs)
+        ax.set_title("")  # Set title to an empty string
+        ax.set_xlabel("")  # Set xlabel to an empty string
+        ax.set_ylabel("")  # Set ylabel to an empty string
+    else:
+        if (images[i,j].shape[1] - center_y) > 25: 
+        # Use Matplotlib's imshow directly to display the image
+            start_y = center_y - 24
+            end_y = center_y + 25
+            
+            # Use Matplotlib's imshow directly to display the image with the specified region
+            ax.imshow(images[i, j][:, start_y:end_y], **plot_kwargs)
+        else: 
+            ax.imshow(images[i, j][:, -49:], **plot_kwargs)
+        ax.set_title("")  # Set title to an empty string
+        ax.set_xlabel("")  # Set xlabel to an empty string
+        ax.set_ylabel("")  # Set ylabel to an empty string
+    
 # Create images for each cell in the SOM grid
 images = create_images_for_som(som, df_prova, bmus)
 
 # Plot the SOM grid with the corresponding images
 plt.figure(figsize=(10, 10))
 som_shape = som.codebook.shape[:-1]
+
+nrows = som_shape[0]
+ncols = som_shape[1]
+
+fig, axes = plt.subplots(nrows, ncols)
+fig.subplots_adjust(0,0,1,1,wspace=0, hspace=0)
+for i in range(nrows):
+    for j in range(ncols):
+        ax = axes[i,j]
+        show_images(images=images, i=i, j=j, ax=ax)
+        ax.axis('off')
+    
+
+
+
+plt.subplots_adjust(wspace=0, hspace=0)  # Set width and height space to zero
 
 for i in range(som_shape[0]):
     for j in range(som_shape[1]):
