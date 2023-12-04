@@ -186,6 +186,8 @@ def get_gpm_storm_patch(granule_id,
         
     # Open granule dataset
     ds = gpm_api.open_granule(filepath, variables=variables, scan_mode=scan_mode)
+    if (slice_end - slice_start < 49):
+        slice_end =slice_start + 49
     ds = ds.isel(along_track=slice(slice_start, slice_end))
     return ds
 
