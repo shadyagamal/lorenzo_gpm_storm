@@ -159,6 +159,7 @@ def get_gpm_storm_patch(granule_id,
                         date, 
                         product = "2A-DPR",
                         scan_mode="FS",
+                        chunks={},
                         verbose=True,
                         variables=["precipRateNearSurface"]):
     
@@ -174,7 +175,7 @@ def get_gpm_storm_patch(granule_id,
                                verbose=verbose,
                                parallel=True,
                                )
-    if len(filepaths) == 0: 
+    if len(filepaths) == 0:
         raise ValueError(f"No file available between {start_time} and {end_time}")
     granule_ids = get_granule_from_filepaths(filepaths)
     indices = [i for i, iid in enumerate(granule_ids) if iid == granule_id]
@@ -185,7 +186,7 @@ def get_gpm_storm_patch(granule_id,
         print(f"filepath: {filepath}")
         
     # Open granule dataset
-    ds = gpm_api.open_granule(filepath, variables=variables, scan_mode=scan_mode)
+    ds = gpm_api.open_granule(filepath, variables=variables, scan_mode=scan_mode, chunks=chunks)
     if (slice_end - slice_start < 49):
         slice_end =slice_start + 49
     ds = ds.isel(along_track=slice(slice_start, slice_end))
