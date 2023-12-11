@@ -142,7 +142,7 @@ def create_som_sample_ds_array(arr_df, variables="precipRateNearSurface"):
             # Open dataset
             ds = open_sample_dataset(df_node, index=index, variables=variables)
             # Add the dataset to the arrays
-            arr_ds[i, j] = ds
+            arr_ds[row, col] = ds
     return arr_ds
 
 
@@ -169,10 +169,11 @@ def _remove_axis(ax):
     
 
 # Function to show images
-def add_image(images, i, j, ax):
+def add_image(images, i, j, ax, variable = "precipRateNearSurface"):
     plot_kwargs = {} 
     cbar_kwargs = {}
-
+    
+    images[i,j] = images[i,j][variable]
     plot_kwargs, cbar_kwargs = get_colorbar_settings(
         name=images[i, j].name, plot_kwargs=plot_kwargs, cbar_kwargs=cbar_kwargs
     )   

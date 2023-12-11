@@ -226,6 +226,45 @@ def _process_nan_values(df, threshold_percentage=30):
 
     return df_no_nan
 
+
+def filter_nan_values(df, variable_name):
+    """ Filter out rows where a specified variable has NaN values."""
+    filtered_df = df.dropna(subset=[variable_name])
+    return filtered_df
+
+def spacial_analysis(df, color_variable, lat_variable="lat", lon_variable="lon"):
+    # Convert latitude, longitude, and color variables to numeric
+    df[lat_variable] = pd.to_numeric(df[lat_variable], errors='coerce')
+    df[lon_variable] = pd.to_numeric(df[lon_variable], errors='coerce')
+    df[color_variable] = pd.to_numeric(df[color_variable], errors='coerce')
+
+    # Drop rows with missing values in specified columns
+    df = df.dropna(subset=[lat_variable, lon_variable, color_variable])
+
+    # Create scatter plot with hexbin for binned heatmap and average color
+    plt.figure(figsize=(12, 10))
+    hb = plt.hexbin(
+        df[lon_variable],
+        df[lat_variable],
+        C=df[color_variable],
+        gridsize=20,  # Adjust gridsize as needed
+        cmap='viridis',
+        edgecolor='w',
+        reduce_C_function=np.mean,  # Calculate mean value in each bin
+        mincnt=1  # Minimum number of points in a bin to be colored
+    )
+
+    # Add labels and a title
+    plt.title(f'Spatial Analysis with Average {color_variable} in Bins')
+    plt.xlabel(lon_variable)
+    plt.ylabel(lat_variable)
+
+    # Add a colorbar
+    cbar = plt.colorbar(hb, label=color_variable)
+
+    # Show the plot
+    plt.show()
+    
 def preliminary_dataset_analysis(dst_dir):
     list_files = glob.glob(os.path.join(dst_dir, "*", "*", "*", "*.parquet"))
     dataset = ds.dataset(list_files)
@@ -239,11 +278,7 @@ def preliminary_dataset_analysis(dst_dir):
     #creating dataset without nan values
     df_no_nan = _process_nan_values(df, threshold_percentage=1)
     
-    
-    
-    
-    
-    
+        
     # Get the list of column names in your DataFrame
     
     _relative_distribution_of_dataset(df)
@@ -267,51 +302,12 @@ file_path = '/home/comi/Projects/dataframe.parquet'
 # Read the Parquet file into a DataFrame
 df = pd.read_parquet(file_path)
 
-index_of_interest = 409
+  
 
-granule_id=df.loc[index_of_interest, 'gpm_granule_id']
-slice_start=df.loc[index_of_interest, 'along_track_start']
-slice_end=df.loc[index_of_interest, 'along_track_end']
-date=df.loc[index_of_interest, 'time']
-storage = "local"
-version = 7 
-product = "2A-DPR"
-scan_mode = "FS"
-variable = "precipRateNearSurface"
-
-ds = get_gpm_storm_patch(
-    granule_id=df.loc[index_of_interest, 'gpm_granule_id'],
-    slice_start=df.loc[index_of_interest, 'along_track_start'],
-    slice_end=df.loc[index_of_interest, 'along_track_end'],
-    date=df.loc[index_of_interest, 'time'],
-    verbose=False,
-    variables=variable,
-)
-
-da = ds[variable]
-da.gpm_api.plot_image()   
+spacial_analysis(df, color_variable = "precipitation_average")
 
 
-from gpm_api.utils.utils_cmap import get_colorbar_settings
-plot_kwargs = {} 
-cbar_kwargs = {}
-
-plot_kwargs, cbar_kwargs = get_colorbar_settings(
-    name=da.name, plot_kwargs=plot_kwargs, cbar_kwargs=cbar_kwargs
-)
-ticklabels = cbar_kwargs.pop("ticklabels", None)
-p = da.plot.imshow(**plot_kwargs, add_colorbar=False) # cbar_kwargs=cbar_kwargs)
-p.axes.set_title("")
-p.axes.set_xlabel("")
-p.axes.set_ylabel("")
-# p.axes.set_axis_off()
-
-# hspace, wspace
-
-# GPM-API 
-# ds.gpm_api.plot_image(variable=variable)
-
-
+df_no_nan_variable = filter_nan_values(df, variable_name="aspect_ratio_largest_patch_over_{threshold}")
 
  
 df["lenght_track"] = df["along_track_end"] - df["along_track_start"]
