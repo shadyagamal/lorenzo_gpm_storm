@@ -215,7 +215,7 @@ def plot_images(image_list, output_directory):
     plt.show()
 
 
-    
+ 
     
 file_path = '/home/comi/Projects/dataframe.parquet'
 
@@ -246,13 +246,19 @@ som.train(data=data, epochs=50, \
 # Get the Best Matching Units (BMUs) for each data point
 bmus = som.bmus
 
-df_bmus = pd.DataFrame(bmus, columns=['row', 'col'])
-# Add som node i, j to df 
-df_final = pd.concat([df_scaled, df_bmus], axis=1)
-# df_scaled['node_i'] = bmus[:,0]
+
+previous_bmus = som.bmus
+# n_changed 
+np.sum(~np.all(som.bmus == previous_bmus, axis=1))
 
 
+# som.update_data 
+som.view_umatrix()
+som.view_similarity_matrix(data[0:10,:])
+som.view_activation_map(data_vector=data[0:10,:])
 
+dist_matrix = som.get_surface_state(data=data[[0],:6]).reshape(10,10)
+plt.imshow(dist_matrix)
 df['row'] = bmus[:, 0]
 df['col'] = bmus[:, 1]
 
@@ -262,7 +268,7 @@ arr_ds = create_som_sample_ds_array(arr_df, variables="precipRateNearSurface")
 
 row=0
 col=8
-num_images = 5
+num_images = 10
 df_node = arr_df[row, col]
 list_sample_ds = sample_node_datasets(df_node, num_images=num_images, variables="precipRateNearSurface")
 
@@ -274,31 +280,13 @@ for ds in list_sample_ds:
     plt.show() 
     
     
-# Save with PICKLE 
-# Specify the filename where you want to save the trained SOM
-filename = 'som_model_first_5_var.pkl'
-
-# Save the trained SOM
-with open(filename, 'wb') as file:
-    pickle.dump(som, file)
-    
-# # Load the trained SOM from the file
-with open(filename, 'rb') as file:
-    som = pickle.load(file)  
-    
-    
-create_map_for_variable_grouped_by_som(df_final, variable='echotopheight30_mean')
 
     
-# Create images for each cell in the SOM grid
-images = create_som_sample_ds_array(som, df_final)
+    
+create_map_for_variable_grouped_by_som(df, variable='precipitation_average')
 
+    
 
-
-node_coordinates = [0, 8]
-output_directory = "/home/comi/Projects/gpm_storm"
-images_node = extract_images_from_node(som, df, bmus, node_coordinates)
-plot_images(images_node, output_directory)
 # Plot the SOM grid with the corresponding images
 figsize=(10, 10)
 som_shape = som.codebook.shape[:-1]
@@ -311,14 +299,25 @@ fig.subplots_adjust(0,0,1,1, wspace=0, hspace=0)
 for i in range(nrows):
     for j in range(ncols):
         ax = axes[i,j]
-        add_image(images=images, i=i, j=j, ax=ax)
+        add_image(images=arr_ds, i=i, j=j, ax=ax)
         
     
 
 
     
+# Save with PICKLE 
+# Specify the filename where you want to save the trained SOM
+filename = 'som_model_first_5_var.pkl'
 
+# Save the trained SOM
+with open(filename, 'wb') as file:
+    pickle.dump(som, file)
+    
+# # Load the trained SOM from the file
+with open(filename, 'rb') as file:
+    som = pickle.load(file)  
 
+df = pd.concat([arr_df[0,4], arr_df[0,5], arr_df[0,6], arr_df[0,7], arr_df[0,3], arr_df[0,8], arr_df[0,9], arr_df[1,5], arr_df[1,6], arr_df[1,7], arr_df[1,8], arr_df[1,9], arr_df[2,5], arr_df[2,6], arr_df[2,7], arr_df[2,8], arr_df[2,9], arr_df[2,5], arr_df[2,6], arr_df[2,7], arr_df[2,8], arr_df[2,9], arr_df[3,5], arr_df[3,6], arr_df[3,7], arr_df[3,8], arr_df[3,9], arr_df[4,5], arr_df[4,6], arr_df[4,7], arr_df[4,8], arr_df[4,9]], axis = 0)
 
 
 

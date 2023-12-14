@@ -83,16 +83,18 @@ def calculate_image_statistics(ds, patch_isel_dict):
        
         # Count rainy pixels for the current threshold
         count_pixels = np.sum(ds_patch["precipRateNearSurface"].data > threshold)
+        mean_intensity = np.mean(ds_patch["precipRateNearSurface"].data > threshold)
+        dict_results[f"mean_for_rainy_pixels_over_{threshold}"] = mean_intensity
         dict_results[f"count_rainy_pixels_over_{threshold}"] = count_pixels
                 
         # Compute aspect ratio 
         if threshold in [0, 1, 2, 5, 10, 20]:
             major_axis, minor_axis, n_patch_pixels = _get_ellipse_major_minor_axis(labeled_image)
             aspect_ratio = major_axis / minor_axis
-            dict_results["major_axis_largest_patch_over_{threshold}"] = major_axis
-            dict_results["minor_axis_largest_patch_over_{threshold}"] = minor_axis
-            dict_results["aspect_ratio_largest_patch_over_{threshold}"] = aspect_ratio
-            dict_results["count_rainy_pixels_in_patch_over_{threshold}"] = n_patch_pixels
+            dict_results[f"major_axis_largest_patch_over_{threshold}"] = major_axis
+            dict_results[f"minor_axis_largest_patch_over_{threshold}"] = minor_axis
+            dict_results[f"aspect_ratio_largest_patch_over_{threshold}"] = aspect_ratio
+            dict_results[f"count_rainy_pixels_in_patch_over_{threshold}"] = n_patch_pixels
  
     # Count percentage of values within a given value range
     intensity_ranges = [(0, 1), (1, 2), (2, 5), (5, 10), (10, 20)]
