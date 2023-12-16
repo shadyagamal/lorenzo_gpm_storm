@@ -1,25 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Sun Nov 26 18:29:52 2023
+Created on Sat Dec 16 15:17:35 2023
 
 @author: comi
 """
 import numpy as np
-import pandas as pd
-import somoclu
-import pickle
 import os
 import random
 import matplotlib.pyplot as plt
-from sklearn.preprocessing import MinMaxScaler
 from gpm_storm.features.routines import get_gpm_storm_patch
 from gpm_api.utils.utils_cmap import get_colorbar_settings
 
 
 
-
-def _add_images_to_subplot(image, output_directory):
+def _add_images_to_subplot(image, output_directory, i):
     """
     Add images to a subplot.
 
@@ -50,7 +45,7 @@ def _add_images_to_subplot(image, output_directory):
         plt.ylabel("")  # Set ylabel to an empty string
         plt.xticks([])  # Hide x-axis ticks
         plt.yticks([])  # Hide y-axis ticks
-        plt.savefig(os.path.join(output_directory, f"image_{i}_{j}.png"))
+        plt.savefig(os.path.join(output_directory, f"image_{i}.png"))
         plt.clf()  # Clear the figure for the next image
 
 
@@ -204,7 +199,7 @@ def plot_images(image_list, output_directory):
     for i, ax in enumerate(axes):
         if i < num_images:
             print(image_list[i].data)
-            _add_images_to_subplot(image_list[i].data, output_directory)
+            _add_images_to_subplot(image_list[i].data, output_directory, i)
 
     # Adjust layout and show the plot
     plt.tight_layout()
@@ -212,108 +207,3 @@ def plot_images(image_list, output_directory):
 
 
  
-    
-file_path = '/home/comi/Projects/dataframe.parquet'
-
-# Read the Parquet file into a DataFrame
-df = pd.read_parquet(file_path)
-
-scaler = MinMaxScaler()
-df_scaled = pd.DataFrame(scaler.fit_transform(df), columns=df.columns)
-# df_scaled_prova = df_scaled.iloc[:40000, :]
-# df_prova = df.iloc[:40000, :]
-# Extract the relevant features from your DataFrame
-data = df_scaled.iloc[:, [0,1,2,3,4,5]].values
-
-# Define the size of the SOM grid
-som_grid_size = (10, 10)
-n_rows, n_columns = 10, 10
-
-
-# Initialize the SOM
-som = somoclu.Somoclu(n_columns=n_columns, n_rows=n_rows, \
-                      gridtype='rectangular', maptype='planar') #  initialcodebook)  ...sample the original codes 
-#-----------------------------------------------------------------------------.
-# Train SOM
-# train(data=None, epochs=10,  scale0=0.1, scaleN=0.001, scalecooling='linear')
-som.train(data=data, epochs=50, \
-          radius0=0, radiusN=1, \
-          scale0=0.5, scaleN=0.001)
-# Get the Best Matching Units (BMUs) for each data point
-bmus = som.bmus
-
-
-previous_bmus = som.bmus
-# n_changed 
-np.sum(~np.all(som.bmus == previous_bmus, axis=1))
-
-
-# som.update_data 
-som.view_umatrix()
-som.view_similarity_matrix(data[0:10,:])
-som.view_activation_map(data_vector=data[0:10,:])
-
-dist_matrix = som.get_surface_state(data=data[[0],:6]).reshape(10,10)
-plt.imshow(dist_matrix)
-df['row'] = bmus[:, 0]
-df['col'] = bmus[:, 1]
-
-
-arr_df = create_som_df_array(som=som, df=df)
-arr_ds = create_som_sample_ds_array(arr_df, variables="precipRateNearSurface")
-
-row=0
-col=8
-num_images = 10
-df_node = arr_df[row, col]
-list_sample_ds = sample_node_datasets(df_node, num_images=num_images, variables="precipRateNearSurface")
-
-
-# 
-variable = "precipRateNearSurface"
-for ds in list_sample_ds:
-    ds[variable].gpm_api.plot_image()
-    plt.show() 
-    
-    
-
-    
-    
-create_map_for_variable_grouped_by_som(df, variable='precipitation_average')
-
-    
-
-# Plot the SOM grid with the corresponding images
-figsize=(10, 10)
-som_shape = som.codebook.shape[:-1]
-
-nrows = som_shape[0]
-ncols = som_shape[1]
-
-fig, axes = plt.subplots(nrows=nrows, ncols=ncols, figsize=figsize)
-fig.subplots_adjust(0,0,1,1, wspace=0, hspace=0)
-for i in range(nrows):
-    for j in range(ncols):
-        ax = axes[i,j]
-        add_image(images=arr_ds, i=i, j=j, ax=ax)
-        
-    
-
-
-    
-# Save with PICKLE 
-# Specify the filename where you want to save the trained SOM
-filename = 'som_model_first_5_var.pkl'
-
-# Save the trained SOM
-with open(filename, 'wb') as file:
-    pickle.dump(som, file)
-    
-# # Load the trained SOM from the file
-with open(filename, 'rb') as file:
-    som = pickle.load(file)  
-
-df = pd.concat([arr_df[0,4], arr_df[0,5], arr_df[0,6], arr_df[0,7], arr_df[0,3], arr_df[0,8], arr_df[0,9], arr_df[1,5], arr_df[1,6], arr_df[1,7], arr_df[1,8], arr_df[1,9], arr_df[2,5], arr_df[2,6], arr_df[2,7], arr_df[2,8], arr_df[2,9], arr_df[2,5], arr_df[2,6], arr_df[2,7], arr_df[2,8], arr_df[2,9], arr_df[3,5], arr_df[3,6], arr_df[3,7], arr_df[3,8], arr_df[3,9], arr_df[4,5], arr_df[4,6], arr_df[4,7], arr_df[4,8], arr_df[4,9]], axis = 0)
-
-
-
