@@ -57,10 +57,10 @@ def run_granule_feature_extraction(filepath, dst_dir, force=False):
     variables = [
         "sunLocalTime",
         "airTemperature",
-        "precipRate",
-        "paramDSD",
+        # "precipRate",
+        # "paramDSD",
         "zFactorFinal",
-        "zFactorMeasured",
+        # "zFactorMeasured",
         "precipRateNearSurface",
         "precipRateESurface",
         "precipRateESurface2",
@@ -136,6 +136,7 @@ def run_granule_feature_extraction(filepath, dst_dir, force=False):
     # %% patch statistics extraction
         
     # Read first in memory to speed up computations [9 seconds]
+    ds["airTemperature"] = ds["airTemperature"].compute()
     ds["zFactorFinal"] = ds["zFactorFinal"].compute()
     ds["precipRateNearSurface"] = ds["precipRateNearSurface"].compute()
     ds["sunLocalTime"] = ds["sunLocalTime"].compute()

@@ -54,13 +54,13 @@ def _add_images_to_subplot(image, output_directory):
         plt.clf()  # Clear the figure for the next image
 
 
-def get_node_dataframe(df, row, col):
+def _get_node_dataframe(df, row, col):
     """Retrieve feature dataframe of specific SOM node."""
     df_node = df[(df['row'] == row) & (df['col'] == col)]
     return df_node
 
 
-def open_sample_dataset(df, index, variables="precipRateNearSurface"):
+def _open_sample_dataset(df, index, variables="precipRateNearSurface"):
     granule_id = df.iloc[index]['gpm_granule_id']
     slice_start = df.iloc[index]['along_track_start']
     slice_end = df.iloc[index]['along_track_end']
@@ -122,7 +122,7 @@ def create_som_df_array(som, df):
     arr_df = np.empty(som_shape, dtype=object)
     for row in range(som_shape[0]):
         for col in range(som_shape[1]):
-            df_node = get_node_dataframe(df, row=row, col=col)
+            df_node = _get_node_dataframe(df, row=row, col=col)
             arr_df[row, col] = df_node
     return arr_df 
 
@@ -140,7 +140,7 @@ def create_som_sample_ds_array(arr_df, variables="precipRateNearSurface"):
             # Select valid random index
             index = random.randint(0, len(df_node) - 1)
             # Open dataset
-            ds = open_sample_dataset(df_node, index=index, variables=variables)
+            ds = _open_sample_dataset(df_node, index=index, variables=variables)
             # Add the dataset to the arrays
             arr_ds[row, col] = ds
     return arr_ds
@@ -152,7 +152,7 @@ def sample_node_datasets(df_node, num_images=20, variables="precipRateNearSurfac
     list_ds = []
     for index in random_indices:
         print(index)
-        ds = open_sample_dataset(df_node, index=index, variables=variables)
+        ds = _open_sample_dataset(df_node, index=index, variables=variables)
         list_ds.append(ds)
     return list_ds
 

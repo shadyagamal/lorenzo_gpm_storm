@@ -20,7 +20,7 @@ if __name__ == "__main__": #  https://github.com/dask/distributed/issues/2520
     from gpm_storm.features.routines import run_feature_extraction
 
     
-    dst_dir ="/ltenas8/data/GPM_STORM/features_v1"
+    dst_dir ="/ltenas8/data/GPM_STORM/features_v2"
     force = True 
     
     # Set HDF5_USE_FILE_LOCKING to avoid going stuck with HDF/netCDF

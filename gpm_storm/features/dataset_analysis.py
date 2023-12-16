@@ -265,13 +265,13 @@ def spacial_analysis(df, color_variable, lat_variable="lat", lon_variable="lon")
 def preliminary_dataset_analysis(dst_dir):
     list_files = glob.glob(os.path.join(dst_dir, "*", "*", "*", "*.parquet"))
     dataset = ds.dataset(list_files)
-    
+    print("created dataset")
     table = dataset.to_table()
 
         
     df = table.to_pandas(types_mapper=pd.ArrowDtype)
     
-    
+    print("created dataframe")
     #creating dataset without nan values
     df_no_nan = _process_nan_values(df, threshold_percentage=1)
     

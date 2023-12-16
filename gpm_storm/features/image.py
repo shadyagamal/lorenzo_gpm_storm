@@ -69,21 +69,22 @@ def calculate_image_statistics(ds, patch_isel_dict):
     dict_results["precipitation_max"] = np.nanmax(ds_patch["precipRateNearSurface"].data)
 
     # Threshold values to iterate over, including 0 for count_over_0
-    thresholds = [0, 1, 2, 5, 10, 20, 50]
+    thresholds = [0, 1, 2, 5, 10, 20, 50, 80, 120]
 
     # Iterate over thresholds and count_over variables
-    for threshold in thresholds:       
+    for threshold in thresholds: 
+        arr = ds_patch["precipRateNearSurface"].data
         # Count rainy areas for a given threshold
         # - 0 is counted as a patches 
         count_patches, labeled_image = cv2.connectedComponents(
-            (ds_patch["precipRateNearSurface"].data > threshold).astype(np.uint8), 
+            (arr > threshold).astype(np.uint8), 
             connectivity=8
         )
         dict_results[f"count_rainy_areas_over_{threshold}"] = count_patches -1
        
         # Count rainy pixels for the current threshold
-        count_pixels = np.sum(ds_patch["precipRateNearSurface"].data > threshold)
-        mean_intensity = np.mean(ds_patch["precipRateNearSurface"].data > threshold)
+        count_pixels = np.sum(arr > threshold)
+        mean_intensity = np.mean(arr[arr > threshold])
         dict_results[f"mean_for_rainy_pixels_over_{threshold}"] = mean_intensity
         dict_results[f"count_rainy_pixels_over_{threshold}"] = count_pixels
                 
@@ -105,9 +106,9 @@ def calculate_image_statistics(ds, patch_isel_dict):
 
     # Compute reflectivity-related statistics
     ds_patch["REFCH"] = ds_patch.gpm_api.retrieve("REFCH").compute()
-    ds_patch["echodepth18"] = ds_patch.gpm_api.retrieve("EchoDepth", threshold=18).compute()
-    ds_patch["echodepth30"] = ds_patch.gpm_api.retrieve("EchoDepth", threshold=30).compute()
-    ds_patch["echodepth50"] = ds_patch.gpm_api.retrieve("EchoDepth", threshold=50).compute()
+    ds_patch["echodepth18"] = ds_patch.gpm_api.retrieve("EchoDepth", threshold=18, mask_liquid_phase = True).compute()
+    ds_patch["echodepth30"] = ds_patch.gpm_api.retrieve("EchoDepth", threshold=30, mask_liquid_phase = True).compute()
+    ds_patch["echodepth50"] = ds_patch.gpm_api.retrieve("EchoDepth", threshold=50, mask_liquid_phase = True).compute()
     ds_patch["echotopheight18"] = ds_patch.gpm_api.retrieve("EchoTopHeight", threshold=18).compute()
     ds_patch["echotopheight30"] = ds_patch.gpm_api.retrieve("EchoTopHeight", threshold=30).compute()
     ds_patch["echotopheight50"] = ds_patch.gpm_api.retrieve("EchoTopHeight", threshold=50).compute()
