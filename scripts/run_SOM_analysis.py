@@ -7,6 +7,7 @@ Created on Sat Dec 16 15:07:47 2023
 """
 import numpy as np
 import pandas as pd
+import pyarrow as pa
 import somoclu
 import pickle
 import matplotlib.pyplot as plt
@@ -15,8 +16,8 @@ import polars as pl
 import cartopy.crs as ccrs
 from gpm_api.visualization.plot import plot_cartopy_background, plot_colorbar
 from gpm_api.bucket.analysis import pl_add_geographic_bins, pl_df_to_xarray
-
-
+from gpm_storm.features.SOM import create_map_for_variable_grouped_by_som, create_som_df_array, create_som_sample_ds_array, sample_node_datasets, add_image
+from gpm_storm.features.dataset_analysis import filter_nan_values
 
 
     
@@ -25,12 +26,20 @@ file_path = '/home/comi/Projects/dataframe.parquet'
 # Read the Parquet file into a DataFrame
 df = pd.read_parquet(file_path)
 
+#select the variables of interest to train the SOM
+variables_names = ["precipitation_average", "precipitation_max"]
+
+#filter the nan values from df for SOM
+for variable_name in variables_names:
+    df = filter_nan_values(df, variable_name)
+
 scaler = MinMaxScaler()
 df_scaled = pd.DataFrame(scaler.fit_transform(df), columns=df.columns)
-# df_scaled_prova = df_scaled.iloc[:40000, :]
-# df_prova = df.iloc[:40000, :]
+
 # Extract the relevant features from your DataFrame
-data = df_scaled.iloc[:, [0,1,2,3,4,5]].values
+data = df_scaled.iloc[variables_names].values
+
+
 
 # Define the size of the SOM grid
 som_grid_size = (10, 10)
@@ -46,22 +55,46 @@ som = somoclu.Somoclu(n_columns=n_columns, n_rows=n_rows, \
 som.train(data=data, epochs=50, \
           radius0=0, radiusN=1, \
           scale0=0.5, scaleN=0.001)
+    
+    
+    
+# Save with PICKLE 
+# Specify the filename where you want to save the trained SOM
+filename = 'som_model_first_5_var.pkl'
 # Get the Best Matching Units (BMUs) for each data point
+# Save the trained SOM
+with open(filename, 'wb') as file:
+    pickle.dump(som, file)
+    
+# # # Load the trained SOM from the file
+# with open(filename, 'rb') as file:
+#     som = pickle.load(file)  
+
+
 bmus = som.bmus
 
-
-previous_bmus = som.bmus
-# n_changed 
-np.sum(~np.all(som.bmus == previous_bmus, axis=1))
+# #if you want to assess the stocasticity of the process
+# previous_bmus = som.bmus
+# # n_changed 
+# np.sum(~np.all(som.bmus == previous_bmus, axis=1))
 
 
 # som.update_data 
 som.view_umatrix()
+plt.savefig(f'/home/comi/Projects/gpm_storm/data/umatrix_{filename}.png')
+
 som.view_similarity_matrix(data[0:10,:])
+plt.savefig(f'/home/comi/Projects/gpm_storm/data/similarity_matrix_{filename}.png')
+
 som.view_activation_map(data_vector=data[0:10,:])
+plt.savefig(f'/home/comi/Projects/gpm_storm/data/activation_map_{filename}.png')
 
 dist_matrix = som.get_surface_state(data=data[[0],:6]).reshape(10,10)
 plt.imshow(dist_matrix)
+plt.savefig(f'/home/comi/Projects/gpm_storm/data/distance_matrix_{filename}.png')
+
+
+
 df['row'] = bmus[:, 0]
 df['col'] = bmus[:, 1]
 
@@ -69,18 +102,23 @@ df['col'] = bmus[:, 1]
 arr_df = create_som_df_array(som=som, df=df)
 arr_ds = create_som_sample_ds_array(arr_df, variables="precipRateNearSurface")
 
-row=0
-col=8
-num_images = 10
-df_node = arr_df[row, col]
-list_sample_ds = sample_node_datasets(df_node, num_images=num_images, variables="precipRateNearSurface")
 
 
-# 
-variable = "precipRateNearSurface"
-for ds in list_sample_ds:
-    ds[variable].gpm_api.plot_image()
-    plt.show() 
+# #get some more exapmles of plot for one specific node
+# row=0
+# col=8
+
+
+# num_images = 10
+# df_node = arr_df[row, col]
+# list_sample_ds = sample_node_datasets(df_node, num_images=num_images, variables="precipRateNearSurface")
+
+
+# # 
+# variable = "precipRateNearSurface"
+# for ds in list_sample_ds:
+#     ds[variable].gpm_api.plot_image()
+#     plt.show() 
     
     
 
@@ -103,24 +141,11 @@ for i in range(nrows):
     for j in range(ncols):
         ax = axes[i,j]
         add_image(images=arr_ds, i=i, j=j, ax=ax)
+plt.savefig(f'/home/comi/Projects/gpm_storm/data/SOM_plot_{filename}.png')
+
         
-    
+#df = pd.concat([arr_df[0,4], arr_df[0,5], arr_df[0,6], arr_df[0,7], arr_df[0,3], arr_df[0,8], arr_df[0,9], arr_df[1,5], arr_df[1,6], arr_df[1,7], arr_df[1,8], arr_df[1,9], arr_df[2,5], arr_df[2,6], arr_df[2,7], arr_df[2,8], arr_df[2,9], arr_df[2,5], arr_df[2,6], arr_df[2,7], arr_df[2,8], arr_df[2,9], arr_df[3,5], arr_df[3,6], arr_df[3,7], arr_df[3,8], arr_df[3,9], arr_df[4,5], arr_df[4,6], arr_df[4,7], arr_df[4,8], arr_df[4,9]], axis = 0)
 
-
-    
-# Save with PICKLE 
-# Specify the filename where you want to save the trained SOM
-filename = 'som_model_first_5_var.pkl'
-
-# Save the trained SOM
-with open(filename, 'wb') as file:
-    pickle.dump(som, file)
-    
-# # Load the trained SOM from the file
-with open(filename, 'rb') as file:
-    som = pickle.load(file)  
-
-df = pd.concat([arr_df[0,4], arr_df[0,5], arr_df[0,6], arr_df[0,7], arr_df[0,3], arr_df[0,8], arr_df[0,9], arr_df[1,5], arr_df[1,6], arr_df[1,7], arr_df[1,8], arr_df[1,9], arr_df[2,5], arr_df[2,6], arr_df[2,7], arr_df[2,8], arr_df[2,9], arr_df[2,5], arr_df[2,6], arr_df[2,7], arr_df[2,8], arr_df[2,9], arr_df[3,5], arr_df[3,6], arr_df[3,7], arr_df[3,8], arr_df[3,9], arr_df[4,5], arr_df[4,6], arr_df[4,7], arr_df[4,8], arr_df[4,9]], axis = 0)
 
 #%%%##plotting and analysis#####
 df_rounded = df.copy() 
@@ -136,25 +161,33 @@ bin_spacing=0.1
 bin_spacing=2
 
 df["row-col"] = df["col"].astype(str) + "-" + df["row"].astype(str)
+df["rowcol"] = df["col"]*5 + df["row"]*5
+df['rowcol'] = pa.array(df['rowcol'], type=pa.int32())
+
 df_pl = pl.from_pandas(df)
 df_pl = pl_add_geographic_bins(df_pl, xbin_column=xbin_column, ybin_column=ybin_column, 
                                bin_spacing=bin_spacing, x_column="lon", y_column="lat")
 
 grouped_df = df_pl.groupby([xbin_column, ybin_column])
-df_stats_pl = grouped_df.agg(pl.col("precipitation_average").count().alias("bin_count"),
-                             pl.col("row-col").mode().alias("more_frequent_node")
+df_stats_pl = grouped_df.agg(pl.col("precipitation_max").mean().alias("bin_count"),
+                             pl.col("rowcol").mode().alias("more_frequent_node")
                              )
+
+
+
 
 ds = pl_df_to_xarray(df_stats_pl,  
                      xbin_column=xbin_column, 
                      ybin_column=ybin_column, 
                      bin_spacing=bin_spacing)
 
+# Convert 'more_frequent_node' to a numeric type (assuming it's convertible)
+ds["more_frequent_node"] = ds["more_frequent_node"].astype(float)
 
 df_subset = df[np.logical_and(df["row"] == 0, df["col"] == 8)]
 lon = df_subset["lon"].values
 lat = df_subset["lat"].values
-value = df_subset["echodepth30_mean"]
+value = df_subset["precipitation_average"]
 
 fig, ax = plt.subplots(figsize=(12, 10), subplot_kw={"projection": ccrs.PlateCarree()})
 plot_cartopy_background(ax)
@@ -162,13 +195,13 @@ ax.scatter(lon, lat, transform=ccrs.PlateCarree(), c="orange", s=2)
 
 fig, ax = plt.subplots(figsize=(12, 10), subplot_kw={"projection": ccrs.PlateCarree()})
 plot_cartopy_background(ax)
-p = ax.scatter(lon, lat, transform=ccrs.PlateCarree(), c=value, s=4, cmap="Spectral", vmax=5000)
+p = ax.scatter(lon, lat, transform=ccrs.PlateCarree(), c=value, s=4, cmap="ocean", vmax=2)
 plot_colorbar(p=p, ax=ax)
 
 
 fig, ax = plt.subplots(figsize=(12, 10), subplot_kw={"projection": ccrs.PlateCarree()})
 plot_cartopy_background(ax)
-p = ds["bin_count"].plot.imshow(ax=ax, x="longitude", y="latitude", cmap="Spectral", add_colorbar=False)
+p = ds["bin_count"].plot.imshow(ax=ax, x="longitude", y="latitude", cmap="turbo", add_colorbar=False)
 plot_colorbar(p=p, ax=ax)
 
 
