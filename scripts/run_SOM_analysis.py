@@ -27,7 +27,7 @@ file_path = '/home/comi/Projects/dataframe.parquet'
 df = pd.read_parquet(file_path)
 
 #select the variables of interest to train the SOM
-variables_names = ["precipitation_average", "precipitation_max"]
+variables_names = ["REFCH_mean", "echodepth18_mean", "echodepth30_mean", "echotopheight30_mean", "echodepth18_max", "REFCH_max"]
 
 #filter the nan values from df for SOM
 for variable_name in variables_names:
@@ -37,7 +37,7 @@ scaler = MinMaxScaler()
 df_scaled = pd.DataFrame(scaler.fit_transform(df), columns=df.columns)
 
 # Extract the relevant features from your DataFrame
-data = df_scaled.iloc[variables_names].values
+data = df_scaled.loc[:, variables_names].values
 
 
 
@@ -60,7 +60,8 @@ som.train(data=data, epochs=50, \
     
 # Save with PICKLE 
 # Specify the filename where you want to save the trained SOM
-filename = 'som_model_first_5_var.pkl'
+filename = 'reflectivity_som'
+filename_complete = filename + ".pkl"
 # Get the Best Matching Units (BMUs) for each data point
 # Save the trained SOM
 with open(filename, 'wb') as file:
@@ -80,16 +81,13 @@ bmus = som.bmus
 
 
 # som.update_data 
-som.view_umatrix()
-plt.savefig(f'/home/comi/Projects/gpm_storm/data/umatrix_{filename}.png')
+som.view_umatrix(filename=f'/home/comi/Projects/gpm_storm/data/umatrix_{filename}.png')
 
-som.view_similarity_matrix(data[0:10,:])
-plt.savefig(f'/home/comi/Projects/gpm_storm/data/similarity_matrix_{filename}.png')
+som.view_similarity_matrix(data= data[0:40,:], filename=f'/home/comi/Projects/gpm_storm/data/similarity_matrix_{filename}.png')
 
-som.view_activation_map(data_vector=data[0:10,:])
-plt.savefig(f'/home/comi/Projects/gpm_storm/data/activation_map_{filename}.png')
+som.view_activation_map(data_vector=data[0:1,:], filename=f'/home/comi/Projects/gpm_storm/data/activation_map_{filename}.png')
 
-dist_matrix = som.get_surface_state(data=data[[0],:6]).reshape(10,10)
+dist_matrix = som.get_surface_state(data=data[[0],:]).reshape(10,10)
 plt.imshow(dist_matrix)
 plt.savefig(f'/home/comi/Projects/gpm_storm/data/distance_matrix_{filename}.png')
 
@@ -148,66 +146,66 @@ plt.savefig(f'/home/comi/Projects/gpm_storm/data/SOM_plot_{filename}.png')
 
 
 #%%%##plotting and analysis#####
-df_rounded = df.copy() 
-df_rounded["lon_bin"] = df_rounded["lon"].round(1)
-df_rounded["lat_bin"] = df_rounded["lat"].round(1)
-grouped_df = df_rounded.groupby(["lon_bin", "lat_bin"])
-binned_df = grouped_df.agg(["count", "median"])
+# df_rounded = df.copy() 
+# df_rounded["lon_bin"] = df_rounded["lon"].round(1)
+# df_rounded["lat_bin"] = df_rounded["lat"].round(1)
+# grouped_df = df_rounded.groupby(["lon_bin", "lat_bin"])
+# binned_df = grouped_df.agg(["count", "median"])
 
-df.dtypes
-xbin_column="lon_bin"
-ybin_column="lat_bin"
-bin_spacing=0.1
-bin_spacing=2
+# df.dtypes
+# xbin_column="lon_bin"
+# ybin_column="lat_bin"
+# bin_spacing=0.1
+# bin_spacing=2
 
-df["row-col"] = df["col"].astype(str) + "-" + df["row"].astype(str)
-df["rowcol"] = df["col"]*5 + df["row"]*5
-df['rowcol'] = pa.array(df['rowcol'], type=pa.int32())
+# df["row-col"] = df["col"].astype(str) + "-" + df["row"].astype(str)
+# df["rowcol"] = df["col"]*5 + df["row"]*5
+# df['rowcol'] = pa.array(df['rowcol'], type=pa.int32())
 
-df_pl = pl.from_pandas(df)
-df_pl = pl_add_geographic_bins(df_pl, xbin_column=xbin_column, ybin_column=ybin_column, 
-                               bin_spacing=bin_spacing, x_column="lon", y_column="lat")
+# df_pl = pl.from_pandas(df)
+# df_pl = pl_add_geographic_bins(df_pl, xbin_column=xbin_column, ybin_column=ybin_column, 
+#                                bin_spacing=bin_spacing, x_column="lon", y_column="lat")
 
-grouped_df = df_pl.groupby([xbin_column, ybin_column])
-df_stats_pl = grouped_df.agg(pl.col("precipitation_max").mean().alias("bin_count"),
-                             pl.col("rowcol").mode().alias("more_frequent_node")
-                             )
-
-
+# grouped_df = df_pl.groupby([xbin_column, ybin_column])
+# df_stats_pl = grouped_df.agg(pl.col("precipitation_max").mean().alias("bin_count"),
+#                              pl.col("rowcol").mode().alias("more_frequent_node")
+#                              )
 
 
-ds = pl_df_to_xarray(df_stats_pl,  
-                     xbin_column=xbin_column, 
-                     ybin_column=ybin_column, 
-                     bin_spacing=bin_spacing)
-
-# Convert 'more_frequent_node' to a numeric type (assuming it's convertible)
-ds["more_frequent_node"] = ds["more_frequent_node"].astype(float)
-
-df_subset = df[np.logical_and(df["row"] == 0, df["col"] == 8)]
-lon = df_subset["lon"].values
-lat = df_subset["lat"].values
-value = df_subset["precipitation_average"]
-
-fig, ax = plt.subplots(figsize=(12, 10), subplot_kw={"projection": ccrs.PlateCarree()})
-plot_cartopy_background(ax)
-ax.scatter(lon, lat, transform=ccrs.PlateCarree(), c="orange", s=2)
-
-fig, ax = plt.subplots(figsize=(12, 10), subplot_kw={"projection": ccrs.PlateCarree()})
-plot_cartopy_background(ax)
-p = ax.scatter(lon, lat, transform=ccrs.PlateCarree(), c=value, s=4, cmap="ocean", vmax=2)
-plot_colorbar(p=p, ax=ax)
 
 
-fig, ax = plt.subplots(figsize=(12, 10), subplot_kw={"projection": ccrs.PlateCarree()})
-plot_cartopy_background(ax)
-p = ds["bin_count"].plot.imshow(ax=ax, x="longitude", y="latitude", cmap="turbo", add_colorbar=False)
-plot_colorbar(p=p, ax=ax)
+# ds = pl_df_to_xarray(df_stats_pl,  
+#                      xbin_column=xbin_column, 
+#                      ybin_column=ybin_column, 
+#                      bin_spacing=bin_spacing)
+
+# # Convert 'more_frequent_node' to a numeric type (assuming it's convertible)
+# ds["more_frequent_node"] = ds["more_frequent_node"].astype(float)
+
+# df_subset = df[np.logical_and(df["row"] == 0, df["col"] == 8)]
+# lon = df_subset["lon"].values
+# lat = df_subset["lat"].values
+# value = df_subset["precipitation_average"]
+
+# fig, ax = plt.subplots(figsize=(12, 10), subplot_kw={"projection": ccrs.PlateCarree()})
+# plot_cartopy_background(ax)
+# ax.scatter(lon, lat, transform=ccrs.PlateCarree(), c="orange", s=2)
+
+# fig, ax = plt.subplots(figsize=(12, 10), subplot_kw={"projection": ccrs.PlateCarree()})
+# plot_cartopy_background(ax)
+# p = ax.scatter(lon, lat, transform=ccrs.PlateCarree(), c=value, s=4, cmap="ocean", vmax=2)
+# plot_colorbar(p=p, ax=ax)
 
 
-fig, ax = plt.subplots(figsize=(12, 10), subplot_kw={"projection": ccrs.PlateCarree()})
-plot_cartopy_background(ax)
-p = ds["row-col"].plot.imshow(ax=ax, x="longitude", y="latitude", cmap="Spectral", add_colorbar=False)
-plot_colorbar(p=p, ax=ax)
+# fig, ax = plt.subplots(figsize=(12, 10), subplot_kw={"projection": ccrs.PlateCarree()})
+# plot_cartopy_background(ax)
+# p = ds["bin_count"].plot.imshow(ax=ax, x="longitude", y="latitude", cmap="turbo", add_colorbar=False)
+# plot_colorbar(p=p, ax=ax)
+
+
+# fig, ax = plt.subplots(figsize=(12, 10), subplot_kw={"projection": ccrs.PlateCarree()})
+# plot_cartopy_background(ax)
+# p = ds["row-col"].plot.imshow(ax=ax, x="longitude", y="latitude", cmap="Spectral", add_colorbar=False)
+# plot_colorbar(p=p, ax=ax)
 
 
