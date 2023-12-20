@@ -22,6 +22,7 @@ def train_and_save_som(filename, variables_names):
     
     # Read the Parquet file into a DataFrame
     df = pd.read_parquet(file_path)  
+
     #filter the nan values from df for SOM
     for variable_name in variables_names:
         df = filter_nan_values(df, variable_name)
