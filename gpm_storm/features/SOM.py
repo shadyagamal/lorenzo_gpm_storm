@@ -160,7 +160,7 @@ def sample_node_datasets(df_node, num_images=20, variables="precipRateNearSurfac
 
 
 # Function to show images
-def add_image(images, i, j, ax, variable = "precipRateNearSurface"):
+def add_image(images, i, j, ax, variable="precipRateNearSurface"):
     plot_kwargs = {} 
     cbar_kwargs = {}
     

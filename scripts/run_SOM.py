@@ -115,7 +115,7 @@ def train_and_save_som(filename, variables_names):
     
         
         
-    create_map_for_variable_grouped_by_som(df, variable='precipitation_average')
+    #create_map_for_variable_grouped_by_som(df, variable='precipitation_average')
     
         
     
