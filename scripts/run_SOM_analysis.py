@@ -21,7 +21,7 @@ from gpm_storm.features.dataset_analysis import filter_nan_values
 
 
     
-file_path = '/home/comi/Projects/dataframe.parquet'
+file_path = '/home/comi/Projects/dataframe2.parquet'
 
 # Read the Parquet file into a DataFrame
 df = pd.read_parquet(file_path)

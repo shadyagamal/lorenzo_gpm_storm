@@ -18,7 +18,7 @@ from gpm_storm.features.dataset_analysis import filter_nan_values
 
 
 def train_and_save_som(filename, variables_names):   
-    file_path = '/home/comi/Projects/dataframe.parquet'
+    file_path = '/home/comi/Projects/dataframe2.parquet'
     
     # Read the Parquet file into a DataFrame
     df = pd.read_parquet(file_path)  
