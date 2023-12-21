@@ -60,16 +60,16 @@ som.train(data=data, epochs=50, \
     
 # Save with PICKLE 
 # Specify the filename where you want to save the trained SOM
-filename = 'reflectivity_som'
+filename = '/home/comi/Projects/gpm_storm/scripts/high_intensity_SOM'
 filename_complete = filename + ".pkl"
 # Get the Best Matching Units (BMUs) for each data point
 # Save the trained SOM
 with open(filename, 'wb') as file:
     pickle.dump(som, file)
     
-# # # Load the trained SOM from the file
-# with open(filename, 'rb') as file:
-#     som = pickle.load(file)  
+# # Load the trained SOM from the file
+with open(filename_complete, 'rb') as file:
+    som = pickle.load(file)  
 
 
 bmus = som.bmus
@@ -102,27 +102,27 @@ arr_ds = create_som_sample_ds_array(arr_df, variables="precipRateNearSurface")
 
 
 
-# #get some more exapmles of plot for one specific node
-# row=0
-# col=8
+#get some more exapmles of plot for one specific node
+row=0
+col=8
 
 
-# num_images = 10
-# df_node = arr_df[row, col]
-# list_sample_ds = sample_node_datasets(df_node, num_images=num_images, variables="precipRateNearSurface")
+num_images = 10
+df_node = arr_df[row, col]
+list_sample_ds = sample_node_datasets(df_node, num_images=num_images, variables="precipRateNearSurface")
 
 
-# # 
-# variable = "precipRateNearSurface"
-# for ds in list_sample_ds:
-#     ds[variable].gpm_api.plot_image()
-#     plt.show() 
+# 
+variable = "precipRateNearSurface"
+for ds in list_sample_ds:
+    ds[variable].gpm_api.plot_image()
+    plt.show() 
     
     
 
     
     
-create_map_for_variable_grouped_by_som(df, variable='precipitation_average')
+create_map_for_variable_grouped_by_som(df, variable='count_rainy_areas_over_50')
 
     
 
