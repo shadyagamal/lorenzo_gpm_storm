@@ -174,7 +174,7 @@ def get_gpm_storm_patch(granule_id,
                                start_time=start_time, 
                                end_time=end_time, 
                                verbose=verbose,
-                               parallel=True,
+                               parallel=False,
                                )
     if len(filepaths) == 0:
         raise ValueError(f"No file available between {start_time} and {end_time}")

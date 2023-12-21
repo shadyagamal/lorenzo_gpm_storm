@@ -16,7 +16,8 @@ import polars as pl
 import cartopy.crs as ccrs
 from gpm_api.visualization.plot import plot_cartopy_background, plot_colorbar
 from gpm_api.bucket.analysis import pl_add_geographic_bins, pl_df_to_xarray
-from gpm_storm.features.SOM import create_map_for_variable_grouped_by_som, create_som_df_array, create_som_sample_ds_array, sample_node_datasets, add_image
+from gpm_storm.som.io import  create_som_df_array, create_som_sample_ds_array, sample_node_datasets
+from gpm_storm.som.io import  create_map_for_variable_grouped_by_som, add_image
 from gpm_storm.features.dataset_analysis import filter_nan_values
 
 
