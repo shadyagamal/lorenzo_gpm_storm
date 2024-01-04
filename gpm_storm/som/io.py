@@ -130,6 +130,7 @@ def _get_som_nodes_queries_array(arr_df):
             dict_info = _get_sample_dict_query(df_node, index)
             # Add the dataset to the arrays
             arr_queries[row, col] = dict_info
+    print(arr_queries)
     return arr_queries
 
 
@@ -138,15 +139,15 @@ def _parallel_get_som_sample_ds_array(arr_df, variables):
     arr_ds = np.empty(arr_queries.shape, dtype=object)
     list_indices = [] 
     list_delayed = []
-    for row in range(arr_queries[0]):
-        for col in range(arr_queries[1]):
+    for row in range(arr_queries.shape[0]):
+        for col in range(arr_queries.shape[1]):
             list_indices.append((row, col))
             list_delayed.append(_delayed_open_dataset_patch(arr_queries[row, col], variables)) 
     
     list_ds = dask.compute(*list_delayed)
     for (row, col), ds in zip(list_indices, list_ds):   
         arr_ds[row, col] = ds
-    return arr_ds      
+    return arr_ds   
       
  
 def _get_som_sample_ds_array(arr_df, variables):
@@ -169,9 +170,9 @@ def _get_som_sample_ds_array(arr_df, variables):
 def create_som_sample_ds_array(arr_df, variables="precipRateNearSurface", parallel=True):
     """Random sample a single GPM patch for each SOM node."""
     if parallel: 
-        return _get_som_sample_ds_array(arr_df, variables)
+        return _parallel_get_som_sample_ds_array(arr_df, variables)
     else: 
-        return  _get_som_sample_ds_array(arr_df, variables)
+        return _get_som_sample_ds_array(arr_df, variables)
 
 
 def _get_node_datasets(df_node, num_images, variables):

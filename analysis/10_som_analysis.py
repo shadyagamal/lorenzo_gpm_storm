@@ -31,7 +31,7 @@ figs_dir = "/home/comi/Projects/gpm_storm/figs/"
 
 som_name = "high_intensity_SOM" # TODO: THIS IS THE NAME IDENTIFYING THE EXPERIMENT
 
-variables = ["precipRateNearSurface"]
+variables = "precipRateNearSurface"
 
 if parallel: 
     create_dask_cluster() 

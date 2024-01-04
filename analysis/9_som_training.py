@@ -48,7 +48,7 @@ som = somoclu.Somoclu(n_columns=n_columns, n_rows=n_rows, \
 
 # Train SOM
 # train(data=None, epochs=10,  scale0=0.1, scaleN=0.001, scalecooling='linear')
-som.train(data=data, epochs=50, \
+som.train(data=data, epochs=100, \
           radius0=0, radiusN=1, \
           scale0=0.5, scaleN=0.001)
 
