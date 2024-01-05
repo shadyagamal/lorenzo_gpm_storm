@@ -158,7 +158,7 @@ def get_gpm_storm_patch(granule_id,
                         slice_start, 
                         slice_end,
                         date, 
-                        product = "2A-DPR",
+                        product="2A-DPR",
                         scan_mode="FS",
                         chunks={},
                         verbose=True,
@@ -176,6 +176,7 @@ def get_gpm_storm_patch(granule_id,
                                verbose=verbose,
                                parallel=False,
                                )
+    print(filepaths)
     if len(filepaths) == 0:
         raise ValueError(f"No file available between {start_time} and {end_time}")
     granule_ids = get_granule_from_filepaths(filepaths)
