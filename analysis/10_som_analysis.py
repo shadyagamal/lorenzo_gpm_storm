@@ -9,6 +9,8 @@ import os
 import somoclu
 import numpy as np
 import pandas as pd
+import cartopy.crs as ccrs
+from gpm_api.visualization.plot import plot_cartopy_background, plot_colorbar
 import matplotlib.pyplot as plt
 from gpm_storm.som.experiments import get_experiment_info, save_som, load_som
 from gpm_storm.som.io import (
@@ -29,7 +31,7 @@ file_path = '/home/comi/Projects/dataframe2.parquet'
 som_dir = "/home/comi/Projects/gpm_storm/scripts/" # TODO to change ... 
 figs_dir = "/home/comi/Projects/gpm_storm/figs/"
 
-som_name = "high_intensity_SOM" # TODO: THIS IS THE NAME IDENTIFYING THE EXPERIMENT
+som_name = "zonal_SOM" # TODO: THIS IS THE NAME IDENTIFYING THE EXPERIMENT
 
 variables = "precipRateNearSurface"
 
@@ -89,29 +91,45 @@ variable = "precipRateNearSurface"
 num_images = 25
 ncols=5
 figsize=(15, 15)
-
-# loop over row, col    # TODO
-   
-row=0
-col=9
- 
-row=5
-col=9
-
-img_fpath = os.path.join(figs_som_dir, f"{row}_{col}_image_samples.png")
-
-df_node = arr_df[row, col]
-list_ds = sample_node_datasets(df_node, num_images=num_images, 
-                               variables=variable,
-                               parallel=parallel)
-
-
-fig = plot_images(list_ds, ncols=ncols, figsize=figsize, variable=variable)
-fig.tight_layout()
-fig.savefig(img_fpath)
-fig.close()
     
 
-#### Plot node feature statistics 
+for row in range(n_rows):
+    for col in range(n_columns):
+        img_fpath = os.path.join(figs_som_dir, f"dir_path_{row}_{col}_nodes_sample.png")
+        img_fpath_map = os.path.join(figs_som_dir, f"dir_path_{row}_{col}_nodes_map.png")
+
+        df_node = arr_df[row, col]
+        list_ds = sample_node_datasets(df_node, num_images=num_images,
+                                       variables=variable,
+                                       parallel=parallel)
+
+        fig = plot_images(list_ds, ncols=ncols, figsize=figsize, variable=variable)
+        fig.tight_layout()
+        fig.savefig(img_fpath)
+        plt.close(fig)  # Close the figure to release resources
+        
+        
+        df_subset = df[np.logical_and(df["row"] == row, df["col"] == col)]
+        # Extract month from the "time" variable
+        df_subset["time"] = pd.to_datetime(df_subset["time"])
+        df_subset.loc[:, "month"] = df_subset["time"].dt.month  # Use .loc to avoid warning
+        
+        lon = df_subset["lon"].values
+        lat = df_subset["lat"].values
+        value = df_subset["precipitation_average"]
+        
+        fig, ax = plt.subplots(figsize=(12, 10), subplot_kw={"projection": ccrs.PlateCarree()})
+        plot_cartopy_background(ax)
+        
+        # Use the extracted month to color data points
+        sc = ax.scatter(lon, lat, transform=ccrs.PlateCarree(), c=df_subset["month"], s=2)
+        
+        # Add colorbar
+        cbar = plt.colorbar(sc, ax=ax, orientation="vertical", pad=0.02)
+        cbar.set_label('Month')
+        
+        fig.savefig(img_fpath_map)
+        plt.close(fig)
+        #### Plot node feature statistics 
 df_stats = create_som_df_features_stats(df)
 fig = plot_som_feature_statistics(df_stats, feature='precipitation_average')
